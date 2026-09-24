@@ -4,7 +4,53 @@ A personal technical learning and interview-preparation platform.
 
 The backend includes a tested health endpoint and the Milestone 2 database
 foundation: SQLAlchemy models and Alembic migrations for PostgreSQL on Supabase.
-CRUD APIs and the React frontend will follow in later milestones.
+The React frontend now provides an interactive learning-path dashboard using
+temporary sample data. CRUD APIs and persistence integration will follow.
+
+## Run the frontend preview
+
+Requires Node.js 22.13 or newer. From the repository root, in a separate terminal:
+
+```powershell
+cd frontend
+npm.cmd ci
+npm.cmd run dev
+```
+
+Open the local address printed by Vite (normally <http://127.0.0.1:5173>).
+On Windows, `npm.cmd` avoids PowerShell script-policy restrictions. On macOS or
+Linux, use `npm` instead.
+
+This milestone includes a responsive dashboard, collapsible desktop sidebar,
+mobile navigation drawer, search/status filters/sorting, learning-path creation,
+editing and confirmed deletion, and read-only path previews. All data is held
+in memory: refresh restores the six sample paths. It does not call FastAPI or
+Supabase. Topic editing and the Markdown editor are future milestones.
+
+The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
+Radix dialogs/menus for keyboard navigation and focus handling. Design styles
+live in `frontend/src/styles.css`; temporary data lives in
+`frontend/src/services/demoPaths.ts`. DM Sans and Manrope load from Google Fonts,
+with system font fallbacks when offline. No account or sign-in is simulated.
+
+Verify the frontend from `frontend`:
+
+```powershell
+npm.cmd test
+npm.cmd run build
+npx.cmd playwright install chromium
+npm.cmd run test:e2e
+```
+
+Component tests cover create/edit/delete, title validation, filtering, search,
+navigation, and Escape/focus behavior. Browser tests cover desktop CRUD, mobile
+navigation, deep-link refresh, and horizontal overflow. Screenshots are written
+to the ignored `frontend/test-results` folder. The browser test command starts
+and stops Vite automatically, using the appropriate npm command for your OS.
+
+To verify manually, create a path, edit its title from its menu, filter the
+dashboard, open a preview, and delete the path. Resize below 640px to inspect
+the single-column layout. Refresh to confirm sample-data reset behavior.
 
 ## Requirements
 
