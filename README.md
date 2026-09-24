@@ -4,12 +4,20 @@ A personal technical learning and interview-preparation platform.
 
 The backend includes a tested health endpoint and the Milestone 2 database
 foundation: SQLAlchemy models and Alembic migrations for PostgreSQL on Supabase.
-The React frontend now provides an interactive learning-path dashboard using
-temporary sample data. CRUD APIs and persistence integration will follow.
+The React dashboard now reads and writes learning paths through FastAPI and
+Supabase PostgreSQL. Topic and note management will follow.
 
-## Run the frontend preview
+## Run the application
 
-Requires Node.js 22.13 or newer. From the repository root, in a separate terminal:
+Requires Node.js 22.13 or newer. First configure `backend/.env` as described
+below and apply the Alembic migration. Start FastAPI in one terminal from
+`backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Then start the frontend in another terminal from the repository root:
 
 ```powershell
 cd frontend
@@ -23,14 +31,15 @@ Linux, use `npm` instead.
 
 This milestone includes a responsive dashboard, collapsible desktop sidebar,
 mobile navigation drawer, search/status filters/sorting, learning-path creation,
-editing and confirmed deletion, and read-only path previews. All data is held
-in memory: refresh restores the six sample paths. It does not call FastAPI or
-Supabase. Topic editing and the Markdown editor are future milestones.
+editing and confirmed deletion, and read-only path summaries. Changes persist
+after refresh through FastAPI. A new database begins with an empty dashboard.
+Topic editing and the Markdown editor are future milestones.
 
 The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
-live in `frontend/src/styles.css`; temporary data lives in
-`frontend/src/services/demoPaths.ts`. DM Sans and Manrope load from Google Fonts,
+live in `frontend/src/styles.css`; the API client lives in
+`frontend/src/services/paths.ts`. Vite proxies `/api` requests to FastAPI on
+port 8000 during development. DM Sans and Manrope load from Google Fonts,
 with system font fallbacks when offline. No account or sign-in is simulated.
 
 Verify the frontend from `frontend`:
@@ -42,15 +51,25 @@ npx.cmd playwright install chromium
 npm.cmd run test:e2e
 ```
 
-Component tests cover create/edit/delete, title validation, filtering, search,
-navigation, and Escape/focus behavior. Browser tests cover desktop CRUD, mobile
-navigation, deep-link refresh, and horizontal overflow. Screenshots are written
+Component tests cover create/edit/delete, failed requests, filtering, search,
+navigation, and Escape/focus behavior. Browser tests use a local API fixture to
+cover desktop CRUD, mobile navigation, deep-link refresh, and horizontal
+overflow. Backend tests use an empty, disposable PostgreSQL instance.
+Screenshots are written
 to the ignored `frontend/test-results` folder. The browser test command starts
 and stops Vite automatically, using the appropriate npm command for your OS.
 
 To verify manually, create a path, edit its title from its menu, filter the
 dashboard, open a preview, and delete the path. Resize below 640px to inspect
-the single-column layout. Refresh to confirm sample-data reset behavior.
+the single-column layout. Refresh to confirm the created path persists. The
+API contract is available at <http://127.0.0.1:8000/docs>.
+
+The learning-path API provides `GET`/`POST /api/paths` and
+`GET`/`PATCH`/`DELETE /api/paths/{path_id}`. List responses are bounded to 100
+items per page, with `limit` and `offset` parameters. The dashboard follows
+all pages. Each response includes topic counts and completion progress. Empty
+or whitespace-only titles return 422, missing paths return 404, and creation
+returns 201. Deleting a path also deletes its topics and notes.
 
 ## Requirements
 
@@ -189,14 +208,15 @@ on disposable databases.
 
 ### Database tests
 
-Normal `pytest` runs health, configuration, and offline migration checks. Seven
-integration cases are skipped unless `TEST_DATABASE_URL` is set to an **empty,
+Normal `pytest` runs health, configuration, and offline migration checks.
+Database integration cases are skipped unless `TEST_DATABASE_URL` is set to an **empty,
 disposable PostgreSQL database** (using the `postgresql+psycopg://` URL scheme).
 Tests refuse a database with existing public tables and roll back their schema
 and data changes. They never fall back to the development `.env` connection.
 
 Integration tests check migration upgrade/downgrade, model/schema agreement,
-timestamps, ordering, default status, invalid records, and database cascades.
+timestamps, ordering, default status, invalid records, database cascades, and
+learning-path API behavior.
 Use an isolated local test database rather than your Supabase development project.
 
 Connection troubleshooting: confirm the project is running, use the exact

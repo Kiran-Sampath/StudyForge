@@ -1,12 +1,11 @@
 """Integration tests require an explicitly selected, disposable PostgreSQL DB."""
 from io import StringIO
-import os
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 import pytest
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -38,26 +37,6 @@ def test_migration_compiles_without_database_credentials():
     assert "ENABLE ROW LEVEL SECURITY" in sql
 
 
-@pytest.fixture
-def database():
-    url = os.environ.get("TEST_DATABASE_URL")
-    if not url:
-        pytest.skip("Set TEST_DATABASE_URL to a disposable PostgreSQL database")
-    engine = create_engine(url)
-    try:
-        # PostgreSQL transactional DDL rolls back all test schema/data changes.
-        with engine.connect() as connection:
-            if inspect(connection).get_table_names():
-                pytest.fail("Integration tests require an empty, dedicated database")
-            connection.rollback()
-            with connection.begin() as transaction:
-                config = alembic_config()
-                config.attributes["connection"] = connection
-                command.upgrade(config, "head")
-                yield connection, config
-                transaction.rollback()
-    finally:
-        engine.dispose()
 
 
 def test_migration_round_trip_and_metadata(database):

@@ -1,4 +1,14 @@
 import { test, expect } from '@playwright/test'
+import { mockPathApi } from '../src/test/fixtures'
+
+test.beforeEach(async ({ page }) => {
+  const api = mockPathApi()
+  await page.route(/\/api\/paths(?:\/|\?|$)/, async route => {
+    const request = route.request()
+    const response = api(request.url(), request.method(), request.postData() ?? '')
+    await route.fulfill({ status: response.status, contentType: 'application/json', body: response.status === 204 ? undefined : JSON.stringify(response.body) })
+  })
+})
 
 test('desktop dashboard supports creating, editing, and deleting a learning path', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1080 })
@@ -10,6 +20,8 @@ test('desktop dashboard supports creating, editing, and deleting a learning path
   await page.getByLabel('Title').fill('Browser-tested path')
   await page.getByLabel('Description').fill('A deliberate place to learn.')
   await page.getByRole('button', { name: 'Create learning path', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Browser-tested path' })).toBeVisible()
+  await page.reload()
   await expect(page.getByRole('heading', { name: 'Browser-tested path' })).toBeVisible()
   await page.getByRole('button', { name: 'Actions for Browser-tested path' }).click()
   await page.getByRole('menuitem', { name: 'Edit learning path' }).click()
@@ -30,7 +42,7 @@ test('mobile navigation, modal, and deep links fit the viewport', async ({ page 
   await page.getByRole('dialog').getByRole('link', { name: 'SQL & Databases' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'SQL & Databases' })).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Relational models')).toBeVisible()
+  await expect(page.getByText('5 completed · 100%')).toBeVisible()
   await page.getByRole('button', { name: 'Edit learning path', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

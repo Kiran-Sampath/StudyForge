@@ -14,6 +14,11 @@ a { color: inherit; text-decoration: none; }
 button { border: 0; }
 button, a, input, textarea, select { outline-offset: 4px; }
 :focus-visible { outline: 2px solid #39765d; }
+button:disabled { cursor: wait; opacity: .6; }
+.loading-state > p { color: #65715d; margin-bottom: 24px; font-size: 14px; }
+.skeleton-card { height: 260px; border: 1px solid #e0e6da; border-radius: 10px; background: #edf1e8; }
+.request-error { color: #9b382b !important; background: #faeee9; padding: 12px; border-radius: 7px; font-size: 12px; }
+.path-summary { margin-top: 35px; }
 button, a { transition: background-color 150ms, color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; }
 svg { flex-shrink: 0; }
 h1, h2, h3, p { margin: 0; }

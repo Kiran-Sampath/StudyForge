@@ -1,18 +1,28 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { mockPathApi } from './test/fixtures'
 
-function setup(route = '/') {
+beforeEach(() => {
+  const api = mockPathApi()
+  vi.stubGlobal('fetch', vi.fn(async (url: string, options?: RequestInit) => {
+    const result = api(url, options?.method, options?.body as string)
+    return new Response(result.status === 204 ? null : JSON.stringify(result.body), { status: result.status, headers: { 'Content-Type': 'application/json' } })
+  }))
+})
+
+async function setup(route = '/') {
   const user = userEvent.setup()
   render(<MemoryRouter initialEntries={[route]}><App /></MemoryRouter>)
+  await screen.findByRole('heading', { level: 1 })
   return user
 }
 
 describe('learning workspace', () => {
   it('creates a path, validates empty titles, and shows its zero progress', async () => {
-    const user = setup()
+    const user = await setup()
     await user.click(screen.getByRole('button', { name: 'New learning path' }))
     const dialog = screen.getByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Create learning path' }))
@@ -27,7 +37,7 @@ describe('learning workspace', () => {
   })
 
   it('edits a path and requires confirmation before deleting it', async () => {
-    const user = setup()
+    const user = await setup()
     await user.click(screen.getByRole('button', { name: 'Actions for System Design' }))
     await user.click(screen.getByRole('menuitem', { name: 'Edit learning path' }))
     const title = screen.getByLabelText(/Title/)
@@ -47,7 +57,7 @@ describe('learning workspace', () => {
   })
 
   it('filters by status, searches, and recovers from no results', async () => {
-    const user = setup()
+    const user = await setup()
     await user.click(screen.getByRole('button', { name: 'Completed' }))
     expect(screen.getAllByRole('article')).toHaveLength(1)
     expect(screen.getByRole('heading', { name: 'SQL & Databases' })).toBeInTheDocument()
@@ -58,20 +68,42 @@ describe('learning workspace', () => {
   })
 
   it('opens a path preview and supports a missing path', async () => {
-    const user = setup()
+    const user = await setup()
     await user.click(screen.getByRole('link', { name: /SQL & Databases Open learning path/ }))
     expect(screen.getByRole('heading', { level: 1, name: 'SQL & Databases' })).toBeInTheDocument()
-    expect(screen.getByText('Relational models')).toBeInTheDocument()
-    expect(screen.getByText(/Topic management and notes are coming/)).toBeInTheDocument()
+    expect(screen.getByText('5 completed · 100%')).toBeInTheDocument()
+    expect(screen.getByText(/Topic management and notes will be available/)).toBeInTheDocument()
   })
 
   it('explains nonexistent routes and closes dialogs with Escape', async () => {
-    const user = setup('/paths/missing')
+    const user = await setup('/paths/missing')
     expect(screen.getByRole('heading', { name: 'This page wandered off.' })).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Back to learning paths' }))
     await user.click(screen.getByRole('button', { name: 'New learning path' }))
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New learning path' })).toHaveFocus()
+  })
+
+  it('retries a failed initial load without showing a fake empty workspace', async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('offline'))
+    const user = await setup()
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not reach StudyForge')
+    expect(screen.queryByText('Every journey starts with a subject.')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await screen.findByRole('heading', { name: 'System Design' })
+    expect(screen.getAllByRole('article')).toHaveLength(6)
+  })
+
+  it('retains entered content after a failed save and allows retry', async () => {
+    const user = await setup()
+    await user.click(screen.getByRole('button', { name: 'New learning path' }))
+    await user.type(screen.getByLabelText(/Title/), 'Keep my work')
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Database temporarily unavailable. Please try again.' }), { status: 503 }))
+    await user.click(screen.getByRole('button', { name: 'Create learning path' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Database temporarily unavailable')
+    expect(screen.getByLabelText(/Title/)).toHaveValue('Keep my work')
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Create learning path' }))
+    expect(await screen.findByRole('heading', { name: 'Keep my work' })).toBeInTheDocument()
   })
 })
