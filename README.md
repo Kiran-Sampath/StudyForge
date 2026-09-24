@@ -4,8 +4,9 @@ A personal technical learning and interview-preparation platform.
 
 The backend includes a tested health endpoint and the Milestone 2 database
 foundation: SQLAlchemy models and Alembic migrations for PostgreSQL on Supabase.
-The React dashboard now reads and writes learning paths through FastAPI and
-Supabase PostgreSQL. Topic and note management will follow.
+The React dashboard reads and writes learning paths through FastAPI and
+Supabase PostgreSQL. Each path now supports ordered topics with editable
+details and progress status. Markdown notes will follow.
 
 ## Run the application
 
@@ -31,9 +32,11 @@ Linux, use `npm` instead.
 
 This milestone includes a responsive dashboard, collapsible desktop sidebar,
 mobile navigation drawer, search/status filters/sorting, learning-path creation,
-editing and confirmed deletion, and read-only path summaries. Changes persist
+editing and confirmed deletion. Open a learning path to add, edit, and delete
+topics or set each topic to Not started, In progress, or Completed. New topics
+append in order. Path progress updates from saved topic statuses. Changes persist
 after refresh through FastAPI. A new database begins with an empty dashboard.
-Topic editing and the Markdown editor are future milestones.
+The topic detail page reserves space for the Markdown editor in the next milestone.
 
 The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
@@ -51,17 +54,19 @@ npx.cmd playwright install chromium
 npm.cmd run test:e2e
 ```
 
-Component tests cover create/edit/delete, failed requests, filtering, search,
-navigation, and Escape/focus behavior. Browser tests use a local API fixture to
-cover desktop CRUD, mobile navigation, deep-link refresh, and horizontal
-overflow. Backend tests use an empty, disposable PostgreSQL instance.
+Component tests cover path and topic create/edit/delete, status updates, failed
+requests, filtering, search, navigation, and Escape/focus behavior. Browser
+tests use a local API fixture to cover desktop CRUD, topic persistence, mobile
+navigation, deep-link refresh, and horizontal overflow. Backend tests use an
+empty, disposable PostgreSQL instance.
 Screenshots are written
 to the ignored `frontend/test-results` folder. The browser test command starts
 and stops Vite automatically, using the appropriate npm command for your OS.
 
 To verify manually, create a path, edit its title from its menu, filter the
-dashboard, open a preview, and delete the path. Resize below 640px to inspect
-the single-column layout. Refresh to confirm the created path persists. The
+dashboard, open a path, add topics, change their statuses, and inspect the
+updated progress. Resize below 640px to inspect the single-column layout.
+Refresh to confirm topics and progress persist. The
 API contract is available at <http://127.0.0.1:8000/docs>.
 
 The learning-path API provides `GET`/`POST /api/paths` and
@@ -70,6 +75,12 @@ items per page, with `limit` and `offset` parameters. The dashboard follows
 all pages. Each response includes topic counts and completion progress. Empty
 or whitespace-only titles return 422, missing paths return 404, and creation
 returns 201. Deleting a path also deletes its topics and notes.
+
+Topic endpoints: `GET`/`POST /api/paths/{path_id}/topics` and
+`GET`/`PATCH`/`DELETE /api/topics/{topic_id}`. Topic lists are bounded to 100
+items per page; the frontend follows all pages. Topics are appended under a
+valid learning path and listed by position. Invalid status values return 422;
+missing parents or topics return 404. Deleting a topic also deletes its notes.
 
 ## Requirements
 

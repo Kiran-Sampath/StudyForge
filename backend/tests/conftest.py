@@ -4,7 +4,12 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.main import app
 
 
 def alembic_config():
@@ -31,3 +36,19 @@ def database():
                 transaction.rollback()
     finally:
         engine.dispose()
+
+
+@pytest.fixture
+def client(database):
+    connection, _ = database
+
+    def test_session():
+        with Session(connection, join_transaction_mode="create_savepoint") as session:
+            yield session
+
+    app.dependency_overrides[get_db] = test_session
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()

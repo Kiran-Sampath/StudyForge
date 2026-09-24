@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sprout, X } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sprout, X } from 'lucide-react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
-import { PathCard, PathActions } from './components/PathCard'
+import { PathCard } from './components/PathCard'
 import { PathDialog, type EditorState } from './components/PathDialog'
-import { PathIcon } from './components/PathIcon'
+import { TopicWorkspace } from './components/TopicWorkspace'
 import * as pathsApi from './services/paths'
 import { pathProgress, pathStatus, type LearningPath, type PathInput } from './types'
 
@@ -69,6 +69,11 @@ export default function App() {
       setMutationError(error instanceof Error ? error.message : 'Could not delete. Please try again.')
     } finally { setSaving(false) }
   }
+  function refreshPath(id: string) {
+    pathsApi.getPath(id).then(updated => {
+      setPaths(previous => previous.map(path => path.id === id ? updated : path))
+    }).catch(() => setToast('Topic saved. Refresh to update the path progress.'))
+  }
   function sidebar() {
     return <><div className="sidebar-brand"><Brand /></div><div className="workspace-label">PERSONAL WORKSPACE</div>
       <nav aria-label="Main navigation"><NavLink to="/" end className="nav-item"><LayoutGrid size={18} /><span>Learning paths</span><span className="nav-count">{paths.length}</span></NavLink></nav>
@@ -82,7 +87,7 @@ export default function App() {
     <div className="main-shell">
       <header className="topbar"><div className="topbar-left"><button className="icon-button desktop-collapse" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><span className="topbar-breadcrumb">Workspace <ChevronRight size={13} /> <span>Learning paths</span></span></div><span className="local-badge"><span /> Personal edition</span></header>
       <main id="main-content" tabIndex={-1}>
-        {loading ? <div className="page loading-state" role="status" aria-live="polite"><p>Loading your learning paths…</p><div className="path-grid" aria-hidden="true">{[1, 2, 3].map(id => <div className="skeleton-card" key={id} />)}</div></div> : loadError ? <div className="page empty-state"><h1>Let's reconnect your workspace.</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <Routes><Route path="/" element={<Dashboard paths={paths} onCreate={() => setEditor({ mode: 'create' })} onEdit={edit} onDelete={remove} />} /><Route path="/paths/:pathId" element={<PathPreview paths={paths} onEdit={edit} onDelete={remove} />} /><Route path="*" element={<NotFound />} /></Routes>}
+        {loading ? <div className="page loading-state" role="status" aria-live="polite"><p>Loading your learning paths…</p><div className="path-grid" aria-hidden="true">{[1, 2, 3].map(id => <div className="skeleton-card" key={id} />)}</div></div> : loadError ? <div className="page empty-state"><h1>Let's reconnect your workspace.</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <Routes><Route path="/" element={<Dashboard paths={paths} onCreate={() => setEditor({ mode: 'create' })} onEdit={edit} onDelete={remove} />} /><Route path="/paths/:pathId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="*" element={<NotFound />} /></Routes>}
       </main>
       <footer className="page-footer"><span>Thoughtful learning. Lasting understanding.</span><span>StudyForge <span className="footer-dot">·</span> Your learning, connected.</span></footer>
     </div>
@@ -113,18 +118,11 @@ function Dashboard({ paths, onCreate, onEdit, onDelete }: { paths: LearningPath[
   </div>
 }
 
-function PathPreview({ paths, onEdit, onDelete }: { paths: LearningPath[]; onEdit: (path: LearningPath) => void; onDelete: (path: LearningPath) => void }) {
+function PathPage({ paths, onEdit, onDelete, onPathChanged, onNotify }: { paths: LearningPath[]; onEdit: (path: LearningPath) => void; onDelete: (path: LearningPath) => void; onPathChanged: (id: string) => void; onNotify: (message: string) => void }) {
   const { pathId } = useParams()
   const path = paths.find(item => item.id === pathId)
   if (!path) return <NotFound />
-  const progress = pathProgress(path)
-  return <div className="page detail-page">
-    <Link className="back-link" to="/"><ArrowLeft size={16} /> All learning paths</Link>
-    <div className="detail-heading"><PathIcon path={path} /><div><span className="eyebrow">LEARNING PATH</span><h1>{path.title}</h1><p>{path.description || 'Your next subject starts here.'}</p></div><PathActions path={path} onEdit={onEdit} onDelete={onDelete} /></div>
-    <div className="detail-section-heading path-summary"><h2>Topics <span>{progress.total}</span></h2><span>{progress.completed} completed · {progress.percent}%</span></div>
-    <div className="empty-state"><span className="empty-icon"><BookOpen size={25} /></span><h3>{progress.total ? 'Your learning path is taking shape.' : 'A fresh page for your ideas.'}</h3><p>Your learning path is saved. Topic management and notes will be available in the next stage.</p></div>
-    <button className="button secondary detail-edit" data-primary-action onClick={() => onEdit(path)}>Edit learning path</button>
-  </div>
+  return <TopicWorkspace path={path} onEditPath={onEdit} onDeletePath={onDelete} onPathChanged={onPathChanged} onNotify={onNotify} />
 }
 
 function NotFound() { return <div className="page empty-state not-found"><span className="empty-icon"><Compass size={28} /></span><h1>This page wandered off.</h1><p>The learning path may have been deleted, or the address is incorrect.</p><Link className="button primary" to="/">Back to learning paths <ArrowRight size={16} /></Link></div> }

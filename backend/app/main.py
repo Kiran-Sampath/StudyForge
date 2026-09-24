@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.learning_paths import router as learning_paths_router
+from app.api.topics import router as topics_router
 
 
 app = FastAPI(
@@ -16,6 +17,7 @@ app = FastAPI(
     version="0.1.0",
 )
 app.include_router(learning_paths_router)
+app.include_router(topics_router)
 
 
 @app.exception_handler(SQLAlchemyError)

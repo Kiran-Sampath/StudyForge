@@ -1,4 +1,20 @@
 export type TopicStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+
+export interface Topic {
+  id: number
+  learning_path_id: number
+  title: string
+  description: string | null
+  status: TopicStatus
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TopicInput {
+  title: string
+  description: string | null
+}
 export type PathIcon = 'coffee' | 'code' | 'database' | 'network' | 'terminal' | 'layers'
 
 export interface LearningPathResponse {

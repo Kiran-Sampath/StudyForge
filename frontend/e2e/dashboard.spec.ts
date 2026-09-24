@@ -3,7 +3,7 @@ import { mockPathApi } from '../src/test/fixtures'
 
 test.beforeEach(async ({ page }) => {
   const api = mockPathApi()
-  await page.route(/\/api\/paths(?:\/|\?|$)/, async route => {
+  await page.route(/\/api\/(?:paths|topics)(?:\/|\?|$)/, async route => {
     const request = route.request()
     const response = api(request.url(), request.method(), request.postData() ?? '')
     await route.fulfill({ status: response.status, contentType: 'application/json', body: response.status === 204 ? undefined : JSON.stringify(response.body) })
@@ -49,4 +49,22 @@ test('mobile navigation, modal, and deep links fit the viewport', async ({ page 
   await page.screenshot({ path: 'test-results/dialog-mobile.png', fullPage: true, animations: 'disabled' })
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('topics persist after refresh and update learning-path progress', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: /Python & FastAPI Open learning path/ }).click()
+  await page.getByRole('button', { name: 'Add topic' }).click()
+  await page.getByLabel('Title').fill('FastAPI routing')
+  await page.getByRole('button', { name: 'Add topic', exact: true }).last().click()
+  await expect(page.getByRole('link', { name: 'FastAPI routing' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Status for FastAPI routing' }).selectOption('COMPLETED')
+  await expect(page.getByText('1 completed · 20%')).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('link', { name: 'FastAPI routing' })).toBeVisible()
+  await expect(page.getByText('1 completed · 20%')).toBeVisible()
+  await page.screenshot({ path: 'test-results/topics-desktop.png', fullPage: true, animations: 'disabled' })
+  await page.getByRole('link', { name: 'FastAPI routing' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'FastAPI routing' })).toBeVisible()
+  await expect(page.getByText('Notes belong here')).toBeVisible()
 })

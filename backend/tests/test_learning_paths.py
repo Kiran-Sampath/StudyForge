@@ -9,22 +9,6 @@ from app.main import app
 from app.models import LearningPath, Topic, Note, TopicStatus
 
 
-@pytest.fixture
-def client(database):
-    connection, _ = database
-
-    def test_session():
-        with Session(connection, join_transaction_mode="create_savepoint") as session:
-            yield session
-
-    app.dependency_overrides[get_db] = test_session
-    try:
-        with TestClient(app) as client:
-            yield client
-    finally:
-        app.dependency_overrides.clear()
-
-
 def test_create_read_update_delete(client):
     response = client.post("/api/paths", json={"title": "  Python  ", "description": "  APIs  "})
     assert response.status_code == 201
