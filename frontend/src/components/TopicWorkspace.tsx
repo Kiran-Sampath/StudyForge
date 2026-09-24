@@ -8,6 +8,7 @@ import * as api from '../services/topics'
 import { PathActions } from './PathCard'
 import { PathIcon } from './PathIcon'
 import { TopicDialog, type TopicEditor } from './TopicDialog'
+import { NotesPanel } from './NotesPanel'
 
 const statuses: { value: TopicStatus; label: string }[] = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -114,7 +115,7 @@ export function TopicWorkspace({ path, onEditPath, onDeletePath, onPathChanged, 
     {loading ? <div className="topic-loading" role="status">Loading topics…</div> : loadError ? <div className="empty-state"><h2>Could not load topics</h2><p role="alert">{loadError}</p><button className="button secondary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : topicId ? selected ? <>
       <div className="topic-detail-heading"><span className="eyebrow">{path.title.toUpperCase()} <ChevronRight size={12} /> TOPIC</span><h1>{selected.title}</h1><p>{selected.description || 'A place to explore this subject in depth.'}</p><div className="topic-detail-controls">{statusControl(selected)}{actions(selected)}</div></div>
       {actionError && <p className="request-error topic-error" role="alert">{actionError}</p>}
-      <div className="topic-notes-placeholder"><span className="empty-icon"><BookOpen size={24} /></span><h2>Notes belong here</h2><p>The Markdown note editor is coming in the next milestone. Your topic and its status are already saved.</p></div>
+      <NotesPanel pathId={path.id} topicId={selected.id} />
     </> : <div className="empty-state"><h1>Topic not found</h1><p>This topic may have been deleted.</p><Link className="button secondary" to={`/paths/${path.id}`}>Back to topics</Link></div> : <>
       <div className="detail-heading"><PathIcon path={path} /><div><span className="eyebrow">LEARNING PATH</span><h1>{path.title}</h1><p>{path.description || 'Your next subject starts here.'}</p></div><PathActions path={path} onEdit={onEditPath} onDelete={onDeletePath} /></div>
       <div className="detail-section-heading path-summary"><div><h2>Topics <span>{topics.length}</span></h2><p className="topic-progress">{progress.completed} completed · {progress.percent}%</p></div><button className="button primary" data-primary-action onClick={() => setEditor({ mode: 'create' })}><Plus size={16} /> Add topic</button></div>

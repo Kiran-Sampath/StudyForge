@@ -1,5 +1,8 @@
 export type TopicStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
 
+export interface Note { id: number; topic_id: number; title: string; content: string; created_at: string; updated_at: string }
+export type NoteInput = Pick<Note, 'title' | 'content'>
+
 export interface Topic {
   id: number
   learning_path_id: number

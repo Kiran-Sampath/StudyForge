@@ -1,4 +1,4 @@
-import type { LearningPathResponse, Topic } from '../types'
+import type { LearningPathResponse, Topic, Note } from '../types'
 
 // Test-only fixtures. The application never imports or seeds these records.
 export function fixturePaths(): LearningPathResponse[] {
@@ -31,6 +31,8 @@ export function mockPathApi() {
   } as Topic)))
   let nextId = 100
   let nextTopicId = 1000
+  let notes: Note[] = []
+  let nextNoteId = 1
   function updateSummary(pathId: number) {
     const path = records.find(record => record.id === pathId)
     if (!path) return
@@ -45,6 +47,23 @@ export function mockPathApi() {
     const segments = parsed.pathname.split('/')
     const id = Number(segments[3])
     const input = body ? JSON.parse(body) : {}
+    if (segments[2] === 'topics' && segments[4] === 'notes') {
+      if (!topics.some(topic => topic.id === id)) return { status: 404, body: { detail: 'Topic not found' } }
+      if (method === 'GET') return { status: 200, body: notes.filter(note => note.topic_id === id).slice(Number(parsed.searchParams.get('offset') ?? 0)) }
+      if (method === 'POST') {
+        const now = new Date().toISOString()
+        const created: Note = { id: nextNoteId++, topic_id: id, title: input.title, content: input.content ?? '', created_at: now, updated_at: now }
+        notes.push(created)
+        return { status: 201, body: created }
+      }
+    }
+    if (segments[2] === 'notes') {
+      const note = notes.find(item => item.id === id)
+      if (!note) return { status: 404, body: { detail: 'Note not found' } }
+      if (method === 'PATCH') { Object.assign(note, input, { updated_at: new Date().toISOString() }); return { status: 200, body: note } }
+      if (method === 'DELETE') { notes = notes.filter(item => item.id !== id); return { status: 204, body: null } }
+      return { status: 200, body: note }
+    }
     if (segments[2] === 'paths' && segments[4] === 'topics') {
       if (!records.some(path => path.id === id)) return { status: 404, body: { detail: 'Learning path not found' } }
       if (method === 'GET') return { status: 200, body: topics.filter(topic => topic.learning_path_id === id).slice(Number(parsed.searchParams.get('offset') ?? 0)) }
@@ -66,6 +85,7 @@ export function mockPathApi() {
       }
       if (method === 'DELETE') {
         topics = topics.filter(item => item.id !== id)
+        notes = notes.filter(item => item.topic_id !== id)
         updateSummary(topic.learning_path_id)
         return { status: 204, body: null }
       }

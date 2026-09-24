@@ -3,7 +3,7 @@ import { mockPathApi } from '../src/test/fixtures'
 
 test.beforeEach(async ({ page }) => {
   const api = mockPathApi()
-  await page.route(/\/api\/(?:paths|topics)(?:\/|\?|$)/, async route => {
+  await page.route(/\/api\/(?:paths|topics|notes)(?:\/|\?|$)/, async route => {
     const request = route.request()
     const response = api(request.url(), request.method(), request.postData() ?? '')
     await route.fulfill({ status: response.status, contentType: 'application/json', body: response.status === 204 ? undefined : JSON.stringify(response.body) })
@@ -66,5 +66,29 @@ test('topics persist after refresh and update learning-path progress', async ({ 
   await page.screenshot({ path: 'test-results/topics-desktop.png', fullPage: true, animations: 'disabled' })
   await page.getByRole('link', { name: 'FastAPI routing' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'FastAPI routing' })).toBeVisible()
-  await expect(page.getByText('Notes belong here')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your first note starts here.' })).toBeVisible()
+})
+
+test('notes save, preview Markdown safely, and survive refresh', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await page.getByRole('textbox', { name: 'Note title' }).fill('Routing notes')
+  await page.getByRole('textbox', { name: 'Note content' }).fill('## Important\n\n```js\nconst route = true\n```\n\n<script>alert(1)</script>\n\n[unsafe](javascript:alert(1))')
+  await expect(page.getByRole('region', { name: 'Markdown preview' }).getByRole('heading', { name: 'Important' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('script')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('a[href^="javascript:"]')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('.hljs')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Save note' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('textbox', { name: 'Note title' })).toHaveValue('Routing notes')
+  await expect(page.getByRole('textbox', { name: 'Note content' })).toContainText('const route = true')
+  await page.getByRole('textbox', { name: 'Note title' }).fill('Unsaved title')
+  await page.getByRole('link', { name: 'Back to topic' }).click()
+  await expect(page.getByRole('dialog', { name: 'Leave without saving?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(page.getByRole('textbox', { name: 'Note title' })).toHaveValue('Unsaved title')
+  await page.getByRole('link', { name: 'Back to topic' }).click()
+  await page.getByRole('button', { name: 'Discard changes' }).click()
+  await expect(page.getByRole('link', { name: /Routing notes/ })).toBeVisible()
 })

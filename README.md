@@ -6,7 +6,7 @@ The backend includes a tested health endpoint and the Milestone 2 database
 foundation: SQLAlchemy models and Alembic migrations for PostgreSQL on Supabase.
 The React dashboard reads and writes learning paths through FastAPI and
 Supabase PostgreSQL. Each path now supports ordered topics with editable
-details and progress status. Markdown notes will follow.
+details and progress status. Topics also have persistent Markdown notes.
 
 ## Run the application
 
@@ -36,7 +36,10 @@ editing and confirmed deletion. Open a learning path to add, edit, and delete
 topics or set each topic to Not started, In progress, or Completed. New topics
 append in order. Path progress updates from saved topic statuses. Changes persist
 after refresh through FastAPI. A new database begins with an empty dashboard.
-The topic detail page reserves space for the Markdown editor in the next milestone.
+Open a topic to create, edit, preview, and delete Markdown notes. The note editor
+supports GitHub-style tables and task lists, fenced code highlighting, and a
+responsive write/preview layout. Save explicitly or press Ctrl/Cmd+S. It warns
+before leaving with unsaved changes.
 
 The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
@@ -56,8 +59,8 @@ npm.cmd run test:e2e
 
 Component tests cover path and topic create/edit/delete, status updates, failed
 requests, filtering, search, navigation, and Escape/focus behavior. Browser
-tests use a local API fixture to cover desktop CRUD, topic persistence, mobile
-navigation, deep-link refresh, and horizontal overflow. Backend tests use an
+tests use a local API fixture to cover desktop CRUD, topic and note persistence,
+safe Markdown preview, mobile navigation, deep-link refresh, and horizontal overflow. Backend tests use an
 empty, disposable PostgreSQL instance.
 Screenshots are written
 to the ignored `frontend/test-results` folder. The browser test command starts
@@ -81,6 +84,12 @@ Topic endpoints: `GET`/`POST /api/paths/{path_id}/topics` and
 items per page; the frontend follows all pages. Topics are appended under a
 valid learning path and listed by position. Invalid status values return 422;
 missing parents or topics return 404. Deleting a topic also deletes its notes.
+
+Note endpoints: `GET`/`POST /api/topics/{topic_id}/notes` and
+`GET`/`PATCH`/`DELETE /api/notes/{note_id}`. Lists are paginated to 100 notes
+per page, newest first. Note titles are required and limited to 200 characters;
+content is limited to 200,000 characters. Markdown preview does not render raw
+HTML, and unsafe link schemes are filtered by the renderer.
 
 ## Requirements
 
