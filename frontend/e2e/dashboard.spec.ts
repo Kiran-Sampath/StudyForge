@@ -16,7 +16,12 @@ test('sign out returns the visitor to the account screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'A little more understanding.' })).toBeVisible()
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
-  await expect(page.getByText(/Supabase Auth isn’t configured yet/)).toBeVisible()
+  if (await page.getByLabel('Email address').count()) {
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue with GitHub' })).toBeVisible()
+  } else {
+    await expect(page.getByText(/Supabase Auth isn’t configured yet/)).toBeVisible()
+  }
 })
 
 test('desktop dashboard supports creating, editing, and deleting a learning path', async ({ page }) => {
