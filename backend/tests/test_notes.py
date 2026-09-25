@@ -14,6 +14,7 @@ def test_note_lifecycle_and_cascade(client):
     note = response.json()
     assert response.headers['location'] == f"/api/notes/{note['id']}"
     assert note['title'] == 'First' and note['topic_id'] == topic_id
+    assert note['format'] == 'markdown' and note['links'] == []
     assert note['created_at'] and note['updated_at']
     assert client.get(f"/api/notes/{note['id']}").json() == note
     second = client.post(url, json={'title': 'Second'}).json()
@@ -26,6 +27,25 @@ def test_note_lifecycle_and_cascade(client):
     assert client.get(f"/api/notes/{note['id']}").status_code == 404
     assert client.delete(f'/api/paths/{path_id}').status_code == 204
     assert client.get(f"/api/notes/{second['id']}").status_code == 404
+
+
+def test_plain_note_and_multiple_resource_links_persist(client):
+    _, _, url = topic_url(client)
+    resources = [
+        {'label': '  Reference docs  ', 'url': 'https://example.com/guide'},
+        {'label': 'Source code', 'url': 'https://github.com/example/repo'},
+        {'label': 'Video', 'url': 'https://www.youtube.com/watch?v=abc'},
+    ]
+    response = client.post(url, json={'title': 'Resources', 'content': '**literal**', 'format': 'plain', 'links': resources})
+    assert response.status_code == 201
+    note = response.json()
+    assert note['format'] == 'plain' and note['content'] == '**literal**'
+    assert [link['label'] for link in note['links']] == ['Reference docs', 'Source code', 'Video']
+    updated = client.patch(f"/api/notes/{note['id']}", json={'format': 'markdown', 'links': resources[:1]})
+    assert updated.status_code == 200
+    saved = client.get(f"/api/notes/{note['id']}").json()
+    assert saved['format'] == 'markdown' and len(saved['links']) == 1
+    assert saved['content'] == '**literal**'
 
 
 @pytest.mark.parametrize('body', [{}, {'title': ''}, {'title': ' '}, {'title': None}, {'title': 'x' * 201}, {'title': 'Valid', 'content': None}, {'title': 'Valid', 'content': 'x' * 200001}, {'title': 'Valid', 'topic_id': 20}])
@@ -51,3 +71,18 @@ def test_missing_note_and_parent(client):
     _, _, url = topic_url(client)
     for query in ('limit=0', 'limit=101', 'offset=-1'):
         assert client.get(f'{url}?{query}').status_code == 422
+
+
+@pytest.mark.parametrize('patch', [
+    {'format': 'html'}, {'format': None}, {'links': None},
+    {'links': [{'url': 'javascript:alert(1)'}]},
+    {'links': [{'url': 'file:///etc/passwd'}]},
+    {'links': [{'url': 'https://example.com', 'label': 'x' * 121}]},
+    {'links': [{'url': 'https://example.com', 'unexpected': True}]},
+    {'links': [{'url': 'https://example.com'}] * 31},
+])
+def test_invalid_format_or_resource_link_preserves_note(client, patch):
+    _, _, url = topic_url(client)
+    note = client.post(url, json={'title': 'Original'}).json()
+    assert client.patch(f"/api/notes/{note['id']}", json=patch).status_code == 422
+    assert client.get(f"/api/notes/{note['id']}").json() == note

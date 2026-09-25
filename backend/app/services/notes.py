@@ -25,7 +25,7 @@ def list_notes(db: Session, topic_id: int, limit: int, offset: int) -> list[Note
 def create_note(db: Session, topic_id: int, data: NoteCreate) -> Note:
     if db.get(Topic, topic_id) is None:
         raise HTTPException(status_code=404, detail="Topic not found")
-    note = Note(topic_id=topic_id, **data.model_dump())
+    note = Note(topic_id=topic_id, **data.model_dump(mode="json"))
     db.add(note)
     db.commit()
     db.refresh(note)
@@ -34,7 +34,7 @@ def create_note(db: Session, topic_id: int, data: NoteCreate) -> Note:
 
 def update_note(db: Session, note_id: int, data: NoteUpdate) -> Note:
     note = get_note(db, note_id)
-    for name, value in data.model_dump(exclude_unset=True).items():
+    for name, value in data.model_dump(exclude_unset=True, mode="json").items():
         setattr(note, name, value)
     db.commit()
     db.refresh(note)

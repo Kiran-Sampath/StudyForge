@@ -52,7 +52,7 @@ export function mockPathApi() {
       if (method === 'GET') return { status: 200, body: notes.filter(note => note.topic_id === id).slice(Number(parsed.searchParams.get('offset') ?? 0)) }
       if (method === 'POST') {
         const now = new Date().toISOString()
-        const created: Note = { id: nextNoteId++, topic_id: id, title: input.title, content: input.content ?? '', created_at: now, updated_at: now }
+        const created: Note = { id: nextNoteId++, topic_id: id, title: input.title, content: input.content ?? '', format: input.format ?? 'markdown', links: input.links ?? [], created_at: now, updated_at: now }
         notes.push(created)
         return { status: 201, body: created }
       }
