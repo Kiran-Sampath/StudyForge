@@ -1,8 +1,32 @@
-import { useEffect, useState } from 'react'
+import { Children, isValidElement, useEffect, useState, type ComponentProps } from 'react'
 import { BookOpen, FileText, Plus, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import remarkGfm from 'remark-gfm'
 import type { Note } from '../types'
 import * as api from '../services/notes'
+
+function NoteCardCodeBlock({ children }: ComponentProps<'pre'>) {
+  const code = Children.toArray(children).find(child => isValidElement(child))
+  const className = isValidElement<{ className?: string }>(code) ? code.props.className ?? '' : ''
+  const language = className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? 'text'
+  return <div className="note-card-code-block"><div className="note-card-code-language">{language}</div><pre>{children}</pre></div>
+}
+
+function getMarkdownExcerpt(content: string) {
+  const lines = content.split('\n')
+  let excerpt = ''
+  for (const line of lines) {
+    if (excerpt.length + line.length + 1 > 1600) break
+    excerpt += `${line}\n`
+  }
+  if (excerpt.length < content.length) {
+    const fenceCount = (excerpt.match(/```/g) ?? []).length
+    if (fenceCount % 2 === 1) excerpt += '\n```'
+  }
+  return excerpt.trim()
+}
 
 export function NotesPanel({ pathId, topicId }: { pathId: string; topicId: number }) {
   const navigate = useNavigate()
@@ -39,6 +63,6 @@ export function NotesPanel({ pathId, topicId }: { pathId: string; topicId: numbe
   return <section className="notes-section" aria-labelledby="notes-heading">
     <div className="detail-section-heading"><div><h2 id="notes-heading">Notes <span>{notes.length}</span></h2><p>Capture what you learn, one thought at a time.</p></div><button className="button primary" onClick={create} disabled={busy}><Plus size={16} /> New note</button></div>
     {error && <div className="request-error" role="alert">{error} <button onClick={() => setReload(value => value + 1)}>Try again</button></div>}
-    {loading ? <p role="status">Loading notes…</p> : notes.length ? <div className="notes-grid">{notes.map(note => <article className="note-card" key={note.id}><Link to={`/paths/${pathId}/topics/${topicId}/notes/${note.id}`}><FileText size={20} /><h3>{note.title}</h3><p>{(note.format === 'markdown' ? note.content.replace(/[#*`>\[\]]/g, '') : note.content).trim().slice(0, 140) || 'Start writing…'}</p><small>{note.format === 'plain' ? 'Plain text' : 'Markdown'} · {note.links.length} {note.links.length === 1 ? 'link' : 'links'} · Updated {new Date(note.updated_at).toLocaleDateString()}</small></Link><button className="icon-button" disabled={busy} aria-label={`Delete ${note.title}`} onClick={() => remove(note)}><Trash2 size={16} /></button></article>)}</div> : <div className="empty-state"><span className="empty-icon"><BookOpen size={24} /></span><h3>Your first note starts here.</h3><p>Write down questions, ideas, and what finally clicked.</p><button className="button secondary" onClick={create} disabled={busy}>Create a note</button></div>}
+    {loading ? <p role="status">Loading notes…</p> : notes.length ? <div className="notes-grid">{notes.map(note => <article className="note-card" key={note.id}><Link to={`/paths/${pathId}/topics/${topicId}/notes/${note.id}`}><FileText size={20} /><h3>{note.title}</h3><div className={`note-card-preview ${note.format === 'plain' ? 'plain' : ''}`}>{note.content.trim() ? note.format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: NoteCardCodeBlock, a: ({ children }) => <span className="note-card-inline-link">{children}</span>, img: () => null }} skipHtml>{getMarkdownExcerpt(note.content)}</ReactMarkdown> : <p>{note.content.trim().slice(0, 240)}</p> : <p className="note-card-empty">Start writing…</p>}</div><small>{note.format === 'plain' ? 'Plain text' : 'Markdown'} · {note.links.length} {note.links.length === 1 ? 'link' : 'links'} · Updated {new Date(note.updated_at).toLocaleDateString()}</small></Link><button className="icon-button" disabled={busy} aria-label={`Delete ${note.title}`} onClick={() => remove(note)}><Trash2 size={16} /></button></article>)}</div> : <div className="empty-state"><span className="empty-icon"><BookOpen size={24} /></span><h3>Your first note starts here.</h3><p>Write down questions, ideas, and what finally clicked.</p><button className="button secondary" onClick={create} disabled={busy}>Create a note</button></div>}
   </section>
 }

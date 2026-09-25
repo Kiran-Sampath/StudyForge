@@ -214,3 +214,16 @@ test('code block insertion is available in plain text and preserves the selected
   await expect(preview.locator('.hljs')).toHaveCount(1)
   await expect(preview.getByRole('button', { name: 'Copy code' })).toBeVisible()
 })
+
+test('note cards render fenced code as a compact syntax-highlighted preview', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await page.getByRole('textbox', { name: 'Note title' }).fill('Java snippet')
+  await page.getByRole('textbox', { name: 'Note content' }).fill('```java\npublic int main() {\n  return 42;\n}\n```')
+  await expect(page.getByText('Saved automatically')).toBeVisible()
+  await page.getByRole('link', { name: 'Back to topic' }).click()
+  const card = page.getByRole('link', { name: /Java snippet/ })
+  await expect(card.locator('.note-card-code-language')).toHaveText('java')
+  await expect(card.locator('.note-card-preview .hljs')).not.toHaveCount(0)
+  await expect(card.locator('.note-card-preview')).not.toContainText('```')
+})

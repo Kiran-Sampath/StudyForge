@@ -155,11 +155,21 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 }
 .notes-section { margin-top: 40px; }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); gap: 16px; margin-top: 20px; }
-.note-card { position: relative; background: #fff; border: 1px solid #e7e8e3; border-radius: 18px; min-height: 190px; transition: transform .2s ease,box-shadow .2s ease; }
+.note-card { position: relative; background: #fff; border: 1px solid #e7e8e3; border-radius: 18px; min-height: 190px; transition: transform .2s ease,box-shadow .2s ease; overflow: hidden; }
 .note-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px #1c302410; }
 .note-card a { display: block; color: inherit; padding: 22px; text-decoration: none; }
 .note-card h3 { margin: 12px 0 7px; font-size: 18px; }
-.note-card p { color: #67716b; font-size: 14px; line-height: 1.5; min-height: 42px; overflow-wrap: anywhere; }
+.note-card-preview { max-height: 92px; margin: 5px 0 10px; overflow: hidden; color: #647168; font-size: 12px; line-height: 1.48; overflow-wrap: anywhere; mask-image: linear-gradient(to bottom,#000 72%,transparent); }
+.note-card-preview p { margin: 4px 0; }
+.note-card-preview h1,.note-card-preview h2,.note-card-preview h3 { margin: 5px 0; font-size: 13px; line-height: 1.35; }
+.note-card-preview ul,.note-card-preview ol { margin: 4px 0; padding-left: 20px; }
+.note-card-preview blockquote { margin: 5px 0; padding-left: 9px; border-left: 2px solid #bdccbd; }
+.note-card-preview pre { margin: 0; padding: 8px 9px; overflow: hidden; border-radius: 0 0 7px 7px; background: #f4f6f2; font-size: 10px; line-height: 1.4; }
+.note-card-code-block { margin: 6px 0; overflow: hidden; border: 1px solid #e1e7e0; border-radius: 8px; background: #f4f6f2; }
+.note-card-code-language { padding: 5px 9px; background: #eaf0ea; color: #68796d; font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.note-card-inline-link { color: #467151; text-decoration: underline; }
+.note-card-preview.plain { white-space: pre-line; }
+.note-card-empty { color: #98a49a; font-style: italic; }
 .note-card small { color: #88918a; }
 .note-card>.icon-button { position: absolute; top: 12px; right: 12px; }
 .note-page { max-width: 1500px; }
