@@ -83,3 +83,13 @@ class NoteResponse(BaseModel):
     confidence: ConfidenceLevel | None
     created_at: datetime
     updated_at: datetime
+
+
+class NoteImageResponse(BaseModel):
+    id: int
+    note_id: int
+    filename: str
+    content_type: Literal["image/jpeg", "image/png", "image/webp"]
+    size_bytes: int
+    alt_text: str | None
+    url: str

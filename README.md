@@ -78,6 +78,15 @@ newer draft. The editor warns before leaving while changes remain unsaved. An
 optional, collapsible Learning Check stores a key takeaway, a question to revisit,
 and a confidence level alongside the note.
 
+Notes can hold up to 10 private JPEG, PNG, or WebP images (8 MB each). Create a
+**private** Supabase Storage bucket named `studyforge-note-images` (or configure
+`SUPABASE_STORAGE_BUCKET` in `backend/.env`) and set `SUPABASE_SERVICE_ROLE_KEY`
+in `backend/.env`. The service-role key is backend-only; never place it in
+frontend environment files or share it in chat. Uploads are checked by file
+signature and served through one-hour signed URLs after the API verifies note
+ownership. Migration `0005` adds image metadata and cascades it when a note is
+deleted.
+
 The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
 live in `frontend/src/styles.css`; the API client lives in
@@ -266,7 +275,7 @@ automatic append positions will be assigned by the future topic service.
 SQLAlchemy updates `updated_at` on application-issued updates; direct SQL edits
 must set it explicitly. Progress will be calculated from topics, not stored.
 
-Alembic autogeneration is restricted to StudyForge's three tables so unrelated
+Alembic autogeneration is restricted to StudyForge's tables so unrelated
 Supabase tables are not proposed for deletion. Always review a generated migration.
 Downgrading to `base` deletes all notebook tables and their data; use that only
 on disposable databases.

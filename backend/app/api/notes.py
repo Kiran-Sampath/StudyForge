@@ -1,17 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, Response, status
+from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import CurrentUser
-from app.schemas.note import NoteCreate, NoteResponse, NoteUpdate
-from app.services import notes
+from app.schemas.note import NoteCreate, NoteImageResponse, NoteResponse, NoteUpdate
+from app.services import note_images, notes
 
 router = APIRouter(tags=["notes"])
 Database = Annotated[Session, Depends(get_db)]
 TopicId = Annotated[int, Path(ge=1, le=2147483647)]
 NoteId = Annotated[int, Path(ge=1, le=2147483647)]
+ImageId = Annotated[int, Path(ge=1, le=2147483647)]
 
 
 @router.post("/api/topics/{topic_id}/notes", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
@@ -41,4 +42,21 @@ def update_note(note_id: NoteId, data: NoteUpdate, user_id: CurrentUser, db: Dat
 @router.delete("/api/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_note(note_id: NoteId, user_id: CurrentUser, db: Database):
     notes.delete_note(db, note_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/api/notes/{note_id}/images", response_model=list[NoteImageResponse])
+def list_note_images(note_id: NoteId, user_id: CurrentUser, db: Database):
+    return note_images.list_images(db, note_id, user_id)
+
+
+@router.post("/api/notes/{note_id}/images", response_model=NoteImageResponse, status_code=status.HTTP_201_CREATED)
+def upload_note_image(note_id: NoteId, user_id: CurrentUser, db: Database,
+                      file: Annotated[UploadFile, File()], alt_text: Annotated[str | None, Form(max_length=500)] = None):
+    return note_images.upload_image(db, note_id, user_id, file, alt_text)
+
+
+@router.delete("/api/notes/{note_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_note_image(note_id: NoteId, image_id: ImageId, user_id: CurrentUser, db: Database):
+    note_images.delete_image(db, note_id, image_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

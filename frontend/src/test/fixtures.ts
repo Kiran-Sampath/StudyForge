@@ -58,6 +58,10 @@ export function mockPathApi() {
       }
     }
     if (segments[2] === 'notes') {
+      if (segments[4] === 'images') {
+        if (method === 'GET') return { status: 200, body: [] }
+        return { status: 404, body: { detail: 'Image not found' } }
+      }
       const note = notes.find(item => item.id === id)
       if (!note) return { status: 404, body: { detail: 'Note not found' } }
       if (method === 'PATCH') { Object.assign(note, input, { updated_at: new Date().toISOString() }); return { status: 200, body: note } }

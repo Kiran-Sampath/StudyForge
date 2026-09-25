@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     db_sslmode: Literal["disable", "require", "verify-ca", "verify-full"] = "require"
     supabase_url: str = ""
     supabase_anon_key: SecretStr = SecretStr("")
+    supabase_service_role_key: SecretStr = SecretStr("")
+    supabase_storage_bucket: str = "studyforge-note-images"
 
     @property
     def database_url(self) -> URL:

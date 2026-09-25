@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.models import LearningPath, Note, Topic, TopicStatus
+from app.models import LearningPath, Note, NoteImage, Topic, TopicStatus
 
 
 def alembic_config():
@@ -35,6 +35,7 @@ def test_migration_compiles_without_database_credentials():
     assert "CREATE TABLE learning_paths" in sql
     assert "ON DELETE CASCADE" in sql
     assert "ENABLE ROW LEVEL SECURITY" in sql
+    assert "CREATE TABLE note_images" in sql
 
 
 
@@ -43,12 +44,12 @@ def test_migration_round_trip_and_metadata(database):
     connection, config = database
     command.check(config)
     assert set(inspect(connection).get_table_names()) == {
-        "learning_paths", "topics", "notes", "alembic_version",
+        "learning_paths", "topics", "notes", "note_images", "alembic_version",
     }
     assert connection.execute(text(
         "SELECT count(*) FROM pg_class WHERE relname IN "
-        "('learning_paths', 'topics', 'notes') AND relrowsecurity"
-    )).scalar_one() == 3
+        "('learning_paths', 'topics', 'notes', 'note_images') AND relrowsecurity"
+    )).scalar_one() == 4
     command.downgrade(config, "base")
     assert inspect(connection).get_table_names() == ["alembic_version"]
     command.upgrade(config, "head")
@@ -64,6 +65,10 @@ def test_defaults_ordering_and_database_cascades(database):
         note = Note(title="Lifecycle", content="# Threads", topic=later)
         session.add_all([path, later, earlier, note])
         session.flush()
+        image = NoteImage(filename="diagram.png", content_type="image/png", size_bytes=12,
+                          storage_path="user/note/image.png", note=note)
+        session.add(image)
+        session.flush()
         assert earlier.status == TopicStatus.NOT_STARTED
         assert path.created_at.tzinfo is not None
         session.expire(path, ["topics"])
@@ -71,6 +76,7 @@ def test_defaults_ordering_and_database_cascades(database):
         # Raw SQL proves the database cascades without assistance from the ORM.
         session.execute(text("DELETE FROM topics WHERE id = :id"), {"id": later.id})
         assert session.scalar(select(Note.id)) is None
+        assert session.scalar(select(NoteImage.id)) is None
         session.add(Note(title="Overview", topic=earlier))
         session.flush()
         session.execute(text("DELETE FROM learning_paths WHERE id = :id"), {"id": path.id})

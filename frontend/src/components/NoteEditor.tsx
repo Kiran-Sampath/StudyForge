@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Bold, ChevronDown, Code2, Columns2, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bold, ChevronDown, Code2, Columns2, ExternalLink, Eye, Heading2, ImagePlus, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { Link, useBlocker, useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -8,7 +8,7 @@ import 'highlight.js/styles/github.css'
 import { MarkdownCodeBlock } from './MarkdownCodeBlock'
 import { PlainTextPreview } from './PlainTextPreview'
 import * as api from '../services/notes'
-import type { ConfidenceLevel, Note, NoteFormat, NoteInput, NoteLink } from '../types'
+import type { ConfidenceLevel, Note, NoteFormat, NoteImage, NoteInput, NoteLink } from '../types'
 
 type EditorLayout = 'write' | 'split' | 'preview'
 type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
@@ -38,6 +38,10 @@ export function NoteEditor() {
   const [keyTakeaway, setKeyTakeaway] = useState('')
   const [revisitQuestion, setRevisitQuestion] = useState('')
   const [confidence, setConfidence] = useState<ConfidenceLevel | null>(null)
+  const [images, setImages] = useState<NoteImage[]>([])
+  const [imageAltText, setImageAltText] = useState('')
+  const [imageBusy, setImageBusy] = useState(false)
+  const [imageError, setImageError] = useState('')
   const [learningCheckOpen, setLearningCheckOpen] = useState(false)
   const [saved, setSaved] = useState<NoteInput>({ title: '', content: '', format: 'markdown', links: [], key_takeaway: null, revisit_question: null, confidence: null })
   const [loading, setLoading] = useState(true)
@@ -67,6 +71,9 @@ export function NoteEditor() {
       if (item.topic_id !== Number(topicId)) { setError('Note not found.'); return }
       const input = { title: item.title, content: item.content, format: item.format, links: item.links, key_takeaway: item.key_takeaway, revisit_question: item.revisit_question, confidence: item.confidence }
       setNote(item)
+      api.listNoteImages(item.id, controller.signal).then(setImages).catch(reason => {
+        if (!controller.signal.aborted) setImageError(reason instanceof Error ? reason.message : 'Could not load note images.')
+      })
       setTitle(item.title)
       setContent(item.content)
       setFormat(item.format)
@@ -206,6 +213,36 @@ export function NoteEditor() {
     setLinkUrl('')
   }
 
+  async function uploadImage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const input = event.currentTarget.elements.namedItem('note-image-file')
+    const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined
+    if (!file || !note) return
+    if (images.length >= 10) { setImageError('A note can have up to 10 images.'); return }
+    setImageBusy(true)
+    setImageError('')
+    try {
+      const added = await api.uploadNoteImage(note.id, file, imageAltText)
+      setImages(current => [...current, added])
+      setImageAltText('')
+      event.currentTarget.reset()
+    } catch (reason) {
+      setImageError(reason instanceof Error ? reason.message : 'Could not upload image.')
+    } finally { setImageBusy(false) }
+  }
+
+  async function removeImage(image: NoteImage) {
+    if (!note) return
+    setImageBusy(true)
+    setImageError('')
+    try {
+      await api.deleteNoteImage(note.id, image.id)
+      setImages(current => current.filter(item => item.id !== image.id))
+    } catch (reason) {
+      setImageError(reason instanceof Error ? reason.message : 'Could not remove image.')
+    } finally { setImageBusy(false) }
+  }
+
   const back = `/paths/${pathId}/topics/${topicId}`
   if (loading) return <div className="page note-page" role="status">Loading note…</div>
   if (!note) return <div className="page empty-state"><h1>Note not found</h1><p role="alert">{error}</p><Link className="button secondary" to={back}>Back to topic</Link></div>
@@ -225,12 +262,21 @@ export function NoteEditor() {
       </section>
       <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>
         <div className="note-pane-title"><Eye size={15} /> PREVIEW</div>
-        <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}</div>
+        <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
+          {images.length > 0 && <div className="note-image-preview" aria-label="Attached note images">{images.map(image => <figure key={image.id}><img src={image.url} alt={image.alt_text || image.filename} /><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
+        </div>
       </section>
     </div>
     <section className={`learning-check ${learningCheckOpen ? 'open' : ''}`} aria-labelledby="learning-check-heading">
       <button className="learning-check-toggle" type="button" aria-expanded={learningCheckOpen} aria-controls="learning-check-fields" onClick={() => setLearningCheckOpen(open => !open)}><span className="learning-check-icon"><Sparkles size={18} /></span><span><strong id="learning-check-heading">Learning Check</strong><small>Optional reflection for your future self</small></span><span className="optional-label">OPTIONAL</span><ChevronDown size={17} className="learning-check-chevron" /></button>
       {learningCheckOpen && <div className="learning-check-fields" id="learning-check-fields"><label>Key takeaway<textarea maxLength={5000} value={keyTakeaway} onChange={event => setKeyTakeaway(event.target.value)} placeholder="What is the most important idea from this note?" /></label><label>Question to revisit<textarea maxLength={5000} value={revisitQuestion} onChange={event => setRevisitQuestion(event.target.value)} placeholder="What should you come back to or investigate further?" /></label><fieldset><legend>Confidence level</legend><div className="confidence-options"><label className={confidence === 'STILL_LEARNING' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'STILL_LEARNING'} onChange={() => setConfidence('STILL_LEARNING')} /> Still Learning</label><label className={confidence === 'NEED_MORE_PRACTICE' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'NEED_MORE_PRACTICE'} onChange={() => setConfidence('NEED_MORE_PRACTICE')} /> Need More Practice</label><label className={confidence === 'CONFIDENT' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'CONFIDENT'} onChange={() => setConfidence('CONFIDENT')} /> Confident</label>{confidence && <button type="button" onClick={() => setConfidence(null)}>Clear</button>}</div></fieldset></div>}
+    </section>
+    <section className="note-resources note-images" aria-labelledby="note-images-heading">
+      <div className="note-resources-heading"><div><h2 id="note-images-heading">Images</h2><p>Attach screenshots, diagrams, and other visual study material to this note.</p></div><span>{images.length} / 10</span></div>
+      <form className="note-image-form" onSubmit={uploadImage}><label>Image file<input type="file" name="note-image-file" accept="image/jpeg,image/png,image/webp" required disabled={imageBusy || images.length >= 10} /></label><label>Alt text <span>optional</span><input value={imageAltText} maxLength={500} onChange={event => setImageAltText(event.target.value)} placeholder="Describe the image" disabled={imageBusy} /></label><button className="button secondary" type="submit" disabled={imageBusy || images.length >= 10}><ImagePlus size={16} />{imageBusy ? 'Working…' : 'Upload image'}</button></form>
+      <p className="note-image-help">JPEG, PNG, or WebP · up to 8 MB each · private to your account</p>
+      {imageError && <p className="request-error" role="alert">{imageError}</p>}
+      {images.length > 0 && <ul className="note-image-list">{images.map(image => <li key={image.id}><img src={image.url} alt={image.alt_text || ''} /><div><strong>{image.filename}</strong><small>{image.alt_text || `${(image.size_bytes / 1024 / 1024).toFixed(2)} MB`}</small></div><button className="icon-button" type="button" aria-label={`Remove ${image.filename}`} disabled={imageBusy} onClick={() => void removeImage(image)}><Trash2 size={16} /></button></li>)}</ul>}
     </section>
     <section className="note-resources" aria-labelledby="resources-heading"><div className="note-resources-heading"><div><h2 id="resources-heading">Learning links</h2><p>Keep articles, repositories, videos, and other material beside your note.</p></div><span>{links.length} / 30</span></div><form className="note-link-form" onSubmit={addLink}><label>Link title <span>optional</span><input value={linkLabel} maxLength={120} onChange={event => setLinkLabel(event.target.value)} placeholder="e.g. Official documentation" /></label><label>URL<input type="url" required value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError('') }} placeholder="https://…" /></label><button className="button secondary" type="submit"><Plus size={16} /> Add link</button></form>{linkError && <p className="request-error" role="alert">{linkError}</p>}{links.length ? <ul className="note-link-list">{links.map((link, index) => <li key={`${link.url}-${index}`}><span className="note-link-icon"><ExternalLink size={18} /></span><div><a href={link.url} target="_blank" rel="noopener noreferrer">{link.label || new URL(link.url).hostname} <ExternalLink size={13} /></a><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></div><button className="icon-button" aria-label={`Remove ${link.label || link.url}`} onClick={() => setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={16} /></button></li>)}</ul> : <p className="note-links-empty">No links yet. Add a URL above to keep it with this note.</p>}</section>
     {blocker.state === 'blocked' && <div className="note-leave-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-title"><div className="note-leave-dialog"><h2 id="leave-title">Leave without saving?</h2><p>Your latest changes will be lost.</p><div><button className="button secondary" onClick={() => blocker.reset()}>Keep editing</button><button className="button primary" onClick={() => blocker.proceed()}>Discard changes</button></div></div></div>}

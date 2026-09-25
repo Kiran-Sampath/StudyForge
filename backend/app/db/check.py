@@ -13,7 +13,7 @@ def main() -> int:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
             tables = set(inspect(connection).get_table_names())
-            required = {"learning_paths", "topics", "notes", "alembic_version"}
+            required = {"learning_paths", "topics", "notes", "note_images", "alembic_version"}
             if not required.issubset(tables):
                 print("Database connected. Schema is incomplete; run alembic upgrade head.")
                 return 1

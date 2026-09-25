@@ -32,3 +32,24 @@ class Note(Timestamps, Base):
     revisit_question: Mapped[str | None] = mapped_column(Text)
     confidence: Mapped[str | None] = mapped_column(String(24))
     topic: Mapped[Topic] = relationship(back_populates="notes")
+    images: Mapped[list["NoteImage"]] = relationship(
+        back_populates="note", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class NoteImage(Timestamps, Base):
+    __tablename__ = "note_images"
+    __table_args__ = (
+        CheckConstraint("length(trim(filename)) > 0", name="filename_not_blank"),
+        CheckConstraint("content_type IN ('image/jpeg', 'image/png', 'image/webp')", name="valid_content_type"),
+        CheckConstraint("size_bytes > 0 AND size_bytes <= 8388608", name="valid_size_bytes"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    note_id: Mapped[int] = mapped_column(ForeignKey("notes.id", ondelete="CASCADE"), index=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(32))
+    size_bytes: Mapped[int]
+    storage_path: Mapped[str] = mapped_column(String(512), unique=True)
+    alt_text: Mapped[str | None] = mapped_column(String(500))
+    note: Mapped[Note] = relationship(back_populates="images")

@@ -281,6 +281,42 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-link-list a:hover { text-decoration: underline; }
 .note-link-list small { display: block; margin-top: 3px; color: #8b9a8e; overflow-wrap: anywhere; }
 .note-links-empty { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid #eff1ed; color: #9aaa9c; font-size: 13px; }
+.note-image-form { display: grid; grid-template-columns: minmax(180px,1fr) minmax(180px,1fr) auto; align-items: end; gap: 12px; margin-top: 23px; }
+.note-image-form label { display: grid; gap: 7px; color: #52665a; font-size: 13px; font-weight: 700; }
+.note-image-form label span { color: #99a79b; font-weight: 400; }
+.note-image-form input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe7df; border-radius: 9px; outline-color: #7ca687; font: inherit; font-size: 14px; }
+.note-image-form input[type=file] { padding: 8px; }
+.note-image-form .button { white-space: nowrap; }
+.note-image-help { margin: 11px 0 0; color: #87958b; font-size: 12px; }
+.note-image-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+.note-image-list li { display: flex; min-width: 0; align-items: center; gap: 11px; padding: 9px; border: 1px solid #edf0eb; border-radius: 11px; }
+.note-image-list li>img { width: 54px; height: 54px; flex: none; border-radius: 7px; object-fit: cover; background: #f2f4f0; }
+.note-image-list li>div { min-width: 0; flex: 1; }
+.note-image-list strong,.note-image-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-image-list strong { color: #405449; font-size: 12px; }
+.note-image-list small { margin-top: 4px; color: #849188; font-size: 11px; }
+.note-image-preview { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; margin-top: 20px; }
+.note-image-preview figure { margin: 0; min-width: 0; }
+.note-image-preview img { display: block; width: 100%; max-height: 440px; object-fit: contain; border: 1px solid #e5e9e3; border-radius: 12px; background: #f7f8f5; }
+.note-image-preview figcaption { margin-top: 6px; color: #7c897f; font-size: 12px; overflow-wrap: anywhere; }
+.note-image-form { display: grid; grid-template-columns: minmax(180px,1fr) minmax(180px,1fr) auto; align-items: end; gap: 12px; margin-top: 23px; }
+.note-image-form label { display: grid; gap: 7px; color: #52665a; font-size: 13px; font-weight: 700; }
+.note-image-form label span { color: #99a79b; font-weight: 400; }
+.note-image-form input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe7df; border-radius: 9px; outline-color: #7ca687; font: inherit; font-size: 14px; }
+.note-image-form input[type=file] { padding: 8px; }
+.note-image-form .button { white-space: nowrap; }
+.note-image-help { margin: 11px 0 0; color: #87958b; font-size: 12px; }
+.note-image-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+.note-image-list li { display: flex; min-width: 0; align-items: center; gap: 11px; padding: 9px; border: 1px solid #edf0eb; border-radius: 11px; }
+.note-image-list li>img { width: 54px; height: 54px; flex: none; border-radius: 7px; object-fit: cover; background: #f2f4f0; }
+.note-image-list li>div { min-width: 0; flex: 1; }
+.note-image-list strong,.note-image-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-image-list strong { color: #405449; font-size: 12px; }
+.note-image-list small { margin-top: 4px; color: #849188; font-size: 11px; }
+.note-image-preview { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; margin-top: 20px; }
+.note-image-preview figure { margin: 0; min-width: 0; }
+.note-image-preview img { display: block; width: 100%; max-height: 440px; object-fit: contain; border: 1px solid #e5e9e3; border-radius: 12px; background: #f7f8f5; }
+.note-image-preview figcaption { margin-top: 6px; color: #7c897f; font-size: 12px; overflow-wrap: anywhere; }
 .learning-check { margin-top: 24px; overflow: hidden; border: 1px solid #e1e7df; border-radius: 16px; background: #fff; }
 .learning-check-toggle { display: flex; align-items: center; gap: 13px; width: 100%; padding: 20px 24px; border: 0; background: transparent; color: #2c4033; text-align: left; cursor: pointer; }
 .learning-check-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 11px; background: #edf4ed; color: #4f7759; }
@@ -301,6 +337,8 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .confidence-options input { accent-color: #326c46; }
 .confidence-options>button { padding: 7px; border: 0; background: transparent; color: #7b887f; cursor: pointer; font-size: 12px; text-decoration: underline; }
 @media(max-width:700px) { .note-link-form { grid-template-columns: 1fr; }.note-link-form .button { justify-self: start; }.note-resources { padding: 22px; }.note-format-picker>span { width: 100%; margin: 0 0 0 4px; } }
+@media(max-width:700px) { .note-image-form { grid-template-columns: 1fr; }.note-image-form .button { justify-self: start; } }
+@media(max-width:700px) { .note-image-form { grid-template-columns: 1fr; }.note-image-form .button { justify-self: start; } }
 @media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; }.note-code-options { flex-wrap: wrap; }.note-code-options label { flex-basis: 100%; } }
 @media(max-width:800px) { .note-header { align-items: flex-start; }.note-header input { font-size: 28px; }.note-editor-grid { grid-template-columns: 1fr; }.note-editor-grid.layout-split .note-preview { margin-top: 14px; }.note-layout-picker { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }.note-layout-picker button { flex: none; } }
 @media(max-width:760px) { .auth-screen { display: block; }.auth-aside { display: none; }.auth-card { width: min(430px,calc(100% - 40px)); min-height: 100vh; padding: 35px 0; display: flex; flex-direction: column; justify-content: center; }.auth-brand { margin-bottom: 40px; }.auth-privacy { margin-top: 35px; }.topbar-account .local-badge { max-width: 150px; } }
