@@ -304,3 +304,42 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 @media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; }.note-code-options { flex-wrap: wrap; }.note-code-options label { flex-basis: 100%; } }
 @media(max-width:800px) { .note-header { align-items: flex-start; }.note-header input { font-size: 28px; }.note-editor-grid { grid-template-columns: 1fr; }.note-editor-grid.layout-split .note-preview { margin-top: 14px; }.note-layout-picker { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }.note-layout-picker button { flex: none; } }
 @media(max-width:760px) { .auth-screen { display: block; }.auth-aside { display: none; }.auth-card { width: min(430px,calc(100% - 40px)); min-height: 100vh; padding: 35px 0; display: flex; flex-direction: column; justify-content: center; }.auth-brand { margin-bottom: 40px; }.auth-privacy { margin-top: 35px; }.topbar-account .local-badge { max-width: 150px; } }
+
+/* Raise small interface copy to improve readability without changing the layout. */
+.workspace-label,.sidebar-section-label { font-size: 11px; }
+.nav-item { font-size: 14px; }
+.nav-count { font-size: 12px; }
+.side-path { font-size: 13px; }
+.sidebar-note > span,.workspace-profile div span { font-size: 11px; }
+.workspace-profile strong { font-size: 12px; }
+.topbar-breadcrumb { font-size: 12px; }
+.local-badge { font-size: 11px; }
+.eyebrow { font-size: 10px; }
+.continue-card .eyebrow { font-size: 9px; }
+.page-heading p { font-size: 14px; }
+.button { font-size: 13px; }
+.stats div > span { font-size: 12px; }
+.overview-foot { font-size: 11px; }
+.continue-card p { font-size: 12px; }
+.continue-link { font-size: 12px; }
+.library-heading p { font-size: 13px; }
+.search-field input { font-size: 13px; }
+.filter-tabs button { font-size: 12px; }
+.filter-tabs button span { font-size: 10px; }
+.sort-control,.sort-control select { font-size: 12px; }
+.card-link h2 { font-size: 16px; }
+.card-description { font-size: 13px; }
+.progress-caption,.progress-caption strong,.status-label { font-size: 11px; }
+.page-footer { font-size: 11px; }
+.topic-progress { font-size: 13px; }
+.topic-copy .topic-title { font-size: 14px; }
+.topic-copy p { font-size: 13px; }
+.topic-status select { font-size: 12px; }
+.topic-notes-placeholder p { font-size: 13px; }
+.note-card-preview { font-size: 13px; }
+.note-code-trigger,.note-layout-picker button { font-size: 13px; }
+.note-pane-title { font-size: 12px; }
+.note-resources-heading p,.learning-check-toggle small { font-size: 13px; }
+.note-link-form label,.learning-check-fields > label,.learning-check-fields legend { font-size: 13px; }
+.learning-check-fields textarea { font-size: 15px; }
+.confidence-options label { font-size: 13px; }
