@@ -37,11 +37,18 @@ topics or set each topic to Not started, In progress, or Completed. New topics
 append in order. Path progress updates from saved topic statuses. Changes persist
 after refresh through FastAPI. A new database begins with an empty dashboard.
 Open a topic to create, edit, preview, and delete notes. Each note can use Plain
-text or Markdown; switching modes keeps the content. Markdown supports GitHub-style
-tables and task lists plus fenced code highlighting. Add up to 30 links to
-articles, repositories, videos, or other learning material. Links open in a new
-tab and are saved with the note. Save explicitly or press Ctrl/Cmd+S. The editor
-warns before leaving with unsaved changes.
+text or Markdown; switching modes keeps the content. Choose Write Only, Split
+View, or Preview Only without changing the note. Split View stacks its panes on
+small screens. Markdown supports GitHub-style tables and task lists plus fenced
+code highlighting, language labels, and a Copy Code action. Add up to 30 links
+to articles, repositories, videos, or other learning material. Links open in a
+new tab and are saved with the note.
+
+Notes autosave shortly after editing while retaining the manual Save button and
+Ctrl/Cmd+S shortcut. Saves run serially so an older request cannot overwrite a
+newer draft. The editor warns before leaving while changes remain unsaved. An
+optional, collapsible Learning Check stores a key takeaway, a question to revisit,
+and a confidence level alongside the note.
 
 The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, and
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
@@ -93,6 +100,8 @@ per page, newest first. Note titles are required and limited to 200 characters;
 content is limited to 200,000 characters. Notes have a `format` of `markdown`
 or `plain` and a `links` array of up to 30 optional-label HTTP(S) URLs. Existing
 notes default to Markdown with no links when migration `0002` is applied.
+Migration `0003` adds nullable `key_takeaway`, `revisit_question`, and
+`confidence` fields for the optional Learning Check.
 Markdown preview does not render raw HTML, and unsafe link schemes are filtered
 by the renderer.
 
