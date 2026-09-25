@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Bold, Code2, Columns2, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Trash2 } from 'lucide-react'
 import { Link, useBlocker, useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
@@ -9,6 +9,11 @@ import * as api from '../services/notes'
 import type { Note, NoteFormat, NoteInput, NoteLink } from '../types'
 
 type EditorLayout = 'write' | 'split' | 'preview'
+type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
+
+function sameInput(left: NoteInput, right: NoteInput) {
+  return left.title === right.title && left.content === right.content && left.format === right.format && JSON.stringify(left.links) === JSON.stringify(right.links)
+}
 
 function linkKind(url: string) {
   const host = new URL(url).hostname.toLowerCase()
@@ -31,9 +36,17 @@ export function NoteEditor() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [layout, setLayout] = useState<EditorLayout>('split')
   const textarea = useRef<HTMLTextAreaElement>(null)
-  const dirty = Boolean(note) && (title !== saved.title || content !== saved.content || format !== saved.format || JSON.stringify(links) !== JSON.stringify(saved.links))
+  const draft: NoteInput = { title, content, format, links }
+  const latestDraft = useRef(draft)
+  const savedDraft = useRef(saved)
+  const savingRef = useRef(false)
+  const saveAgain = useRef(false)
+  latestDraft.current = draft
+  savedDraft.current = saved
+  const dirty = Boolean(note) && !sameInput(draft, saved)
   const blocker = useBlocker(dirty)
 
   useEffect(() => {
@@ -50,6 +63,7 @@ export function NoteEditor() {
       setFormat(item.format)
       setLinks(item.links)
       setSaved(input)
+      setSaveStatus('saved')
     }).catch(reason => {
       if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'Could not load note.')
     }).finally(() => {
@@ -65,23 +79,49 @@ export function NoteEditor() {
     return () => window.removeEventListener('beforeunload', guard)
   }, [dirty])
 
-  async function save() {
-    if (!note || saving || !dirty) return
-    if (!title.trim()) { setError('Add a title before saving.'); return }
-    const submitted: NoteInput = { title: title.trim(), content, format, links }
+  const save = useCallback(async () => {
+    if (!note) return
+    if (!latestDraft.current.title.trim()) { setError('Add a title before saving.'); return }
+    if (savingRef.current) { saveAgain.current = true; return }
+    const submitted = { ...latestDraft.current, title: latestDraft.current.title.trim(), links: [...latestDraft.current.links] }
+    if (sameInput(submitted, savedDraft.current)) return
+    savingRef.current = true
     setSaving(true)
+    setSaveStatus('saving')
     setError('')
+    let succeeded = false
     try {
       const updated = await api.updateNote(note.id, submitted)
+      const persisted = { title: updated.title, content: updated.content, format: updated.format, links: updated.links }
       setNote(updated)
-      setTitle(current => current === title ? updated.title : current)
-      setSaved({ title: updated.title, content: updated.content, format: updated.format, links: updated.links })
+      setTitle(current => current === submitted.title ? updated.title : current)
+      setSaved(persisted)
+      savedDraft.current = persisted
+      succeeded = true
+      setSaveStatus(sameInput(latestDraft.current, persisted) ? 'saved' : 'unsaved')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save note.')
+      setSaveStatus('error')
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
-  }
+    const hasNewerChanges = !sameInput(latestDraft.current, savedDraft.current)
+    if (succeeded && (saveAgain.current || hasNewerChanges)) {
+      saveAgain.current = false
+      void save()
+    }
+  }, [note])
+
+  useEffect(() => {
+    if (!note || !dirty || !title.trim()) {
+      if (!dirty && !savingRef.current) setSaveStatus('saved')
+      return
+    }
+    setSaveStatus(current => current === 'saving' ? current : 'unsaved')
+    const timer = window.setTimeout(() => { void save() }, 900)
+    return () => window.clearTimeout(timer)
+  }, [note, dirty, title, content, format, links, save])
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -92,7 +132,7 @@ export function NoteEditor() {
     }
     window.addEventListener('keydown', shortcut)
     return () => window.removeEventListener('keydown', shortcut)
-  })
+  }, [save])
 
   function insert(before: string, after = before, placeholder = 'text') {
     const field = textarea.current
@@ -129,7 +169,7 @@ export function NoteEditor() {
   if (!note) return <div className="page empty-state"><h1>Note not found</h1><p role="alert">{error}</p><Link className="button secondary" to={back}>Back to topic</Link></div>
 
   return <div className="page note-page">
-    <div className="note-topline"><Link className="back-link" to={back}><ArrowLeft size={16} /> Back to topic</Link><span className="note-save-state" role="status">{saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'Saved'}</span></div>
+    <div className="note-topline"><Link className="back-link" to={back}><ArrowLeft size={16} /> Back to topic</Link><span className={`note-save-state ${saveStatus}`} role="status">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed — changes kept' : saveStatus === 'unsaved' ? 'Unsaved changes' : 'Saved automatically'}</span></div>
     <div className="note-header"><input aria-label="Note title" maxLength={200} value={title} onChange={event => setTitle(event.target.value)} /><button className="button primary" disabled={!dirty || saving} onClick={save}><Save size={16} /> Save note</button></div>
     {error && <p className="request-error" role="alert">{error}</p>}
     <fieldset className="note-format-picker"><legend>Editor mode</legend><label className={format === 'plain' ? 'selected' : ''}><input type="radio" name="note-format" value="plain" checked={format === 'plain'} onChange={() => setFormat('plain')} /> Plain text</label><label className={format === 'markdown' ? 'selected' : ''}><input type="radio" name="note-format" value="markdown" checked={format === 'markdown'} onChange={() => setFormat('markdown')} /> Markdown</label><span>Switching modes keeps your writing.</span></fieldset>

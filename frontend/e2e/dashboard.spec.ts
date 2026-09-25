@@ -85,8 +85,7 @@ test('notes save, preview Markdown safely, and survive refresh', async ({ page }
   await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('script')).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('a[href^="javascript:"]')).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Markdown preview' }).locator('.hljs')).toHaveCount(1)
-  await page.getByRole('button', { name: 'Save note' }).click()
-  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await expect(page.getByText('Saved automatically', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('textbox', { name: 'Note title' })).toHaveValue('Routing notes')
   await expect(page.getByRole('textbox', { name: 'Note content' })).toContainText('const route = true')
@@ -127,4 +126,32 @@ test('plain text notes keep formatting literal and save multiple learning links'
   await page.getByRole('button', { name: 'Save note' }).click()
   await page.reload()
   await expect(page.getByRole('radio', { name: 'Markdown' })).toBeChecked()
+})
+
+test('autosave serializes newer edits and persists the latest draft', async ({ page }) => {
+  let activePatches = 0
+  let maximumConcurrentPatches = 0
+  const submittedTitles: string[] = []
+  await page.route(/\/api\/notes\/\d+$/, async route => {
+    if (route.request().method() !== 'PATCH') { await route.fallback(); return }
+    const body = JSON.parse(route.request().postData() ?? '{}')
+    submittedTitles.push(body.title)
+    activePatches += 1
+    maximumConcurrentPatches = Math.max(maximumConcurrentPatches, activePatches)
+    if (body.title === 'First autosave') await new Promise(resolve => setTimeout(resolve, 1500))
+    await route.fallback()
+    activePatches -= 1
+  })
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  const title = page.getByRole('textbox', { name: 'Note title' })
+  await title.fill('First autosave')
+  await expect.poll(() => submittedTitles).toContain('First autosave')
+  await expect(page.getByText(/Saving/)).toBeVisible()
+  await title.fill('Latest autosave')
+  await expect(page.getByText('Saved automatically')).toBeVisible()
+  expect(maximumConcurrentPatches).toBe(1)
+  expect(submittedTitles).toEqual(['First autosave', 'Latest autosave'])
+  await page.reload()
+  await expect(title).toHaveValue('Latest autosave')
 })

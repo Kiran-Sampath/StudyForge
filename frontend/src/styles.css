@@ -165,6 +165,8 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-page { max-width: 1500px; }
 .note-topline,.note-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .note-save-state { color: #68746d; font-size: 13px; }
+.note-save-state.saving,.note-save-state.unsaved { color: #8a6a2f; }
+.note-save-state.error { color: #a34b42; }
 .note-header { margin: 25px 0 30px; }
 .note-header input { min-width: 0; flex: 1; border: 0; background: transparent; font-family: inherit; font-size: clamp(28px,3vw,44px); font-weight: 600; line-height: 1.2; color: #26362d; outline: none; }
 .note-header input:focus { box-shadow: 0 2px #90a999; }
