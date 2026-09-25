@@ -30,6 +30,29 @@ Open the local address printed by Vite (normally <http://127.0.0.1:5173>).
 On Windows, `npm.cmd` avoids PowerShell script-policy restrictions. On macOS or
 Linux, use `npm` instead.
 
+### Configure sign-in
+
+Copy `frontend/.env.example` to `frontend/.env.local` and set the Supabase
+project URL and publishable (or legacy anon) key. The key is intended for the
+browser; never put the service-role key in frontend configuration. Set the same
+URL and publishable/anon key as `SUPABASE_URL` and `SUPABASE_ANON_KEY` in
+`backend/.env`. Restart both servers after changing environment files.
+
+In Supabase Authentication settings, enable email/password and the Google and
+GitHub providers you want to use. Add `http://127.0.0.1:5173/auth/callback` to
+the allowed redirect URLs and set the local site URL to `http://127.0.0.1:5173`.
+Each OAuth provider also requires its OAuth client ID and secret from that
+provider's developer console. For deployment, replace the local callback with
+your deployed site's callback URL.
+
+Apply migrations with `backend/.venv/Scripts/python.exe -m alembic upgrade head`.
+Migration `0004` adds nullable account ownership to learning paths. Existing
+paths are intentionally left unassigned and remain inaccessible until you map
+them to your account UUID from Supabase Authentication → Users. After backing
+up the database, run `UPDATE learning_paths SET owner_id = '<your-auth-user-uuid>' WHERE owner_id IS NULL;`
+in the Supabase SQL editor to retain those existing paths and their topics and
+notes in your account.
+
 This milestone includes a responsive dashboard, collapsible desktop sidebar,
 mobile navigation drawer, search/status filters/sorting, learning-path creation,
 editing and confirmed deletion. Open a learning path to add, edit, and delete
@@ -60,7 +83,9 @@ Radix dialogs/menus for keyboard navigation and focus handling. Design styles
 live in `frontend/src/styles.css`; the API client lives in
 `frontend/src/services/paths.ts`. Vite proxies `/api` requests to FastAPI on
 port 8000 during development. DM Sans and Manrope load from Google Fonts,
-with system font fallbacks when offline. No account or sign-in is simulated.
+with system font fallbacks when offline. Supabase Auth supports email/password,
+Google, and GitHub sign-in; FastAPI verifies each bearer session with Supabase
+and filters every learning path, topic, and note request by account owner.
 
 Verify the frontend from `frontend`:
 
@@ -196,9 +221,9 @@ modules as those features are introduced.
    Keep `DB_SSLMODE=require` for the encrypted Supabase connection. The password
    is your database password, not an API key. Separate fields avoid having to
    URL-encode password characters. Do not share or commit `.env`.
-3. Use the project's database administrator connection for the initial migrations.
-   The application currently assumes a single local user; keep FastAPI bound to
-   localhost. Database credentials remain on the backend.
+3. Use the project's database administrator connection for migrations.
+   Keep database credentials on the backend and never expose the service-role key
+   to the browser.
 4. From `backend`, run:
 
 ```powershell
@@ -209,7 +234,7 @@ modules as those features are introduced.
 .\.venv\Scripts\python.exe -m alembic check
 ```
 
-Expected: revision `0001`, the three notebook tables plus `alembic_version`, and
+Expected: revision `0004`, the notebook tables plus `alembic_version`, and
 no pending model changes. Tables are created by migrations, never automatically
 at server startup. `/api/health` remains a server-only check and works without
 database credentials. Restart the server after changing `.env`.
@@ -218,10 +243,11 @@ Supabase's project URL and service-role key authenticate its HTTP Data API.
 They cannot replace the PostgreSQL credentials used by SQLAlchemy and Alembic.
 No Supabase SDK is needed for this architecture.
 
-The initial migration enables row-level security on notebook tables without
-browser-access policies. The backend's administrator connection can access them;
-this is not multi-user authorization. Since the frontend will call FastAPI,
-you can also disable Supabase's unused Data API in the project settings.
+The frontend calls FastAPI rather than the Supabase Data API. The backend verifies
+the user's bearer session with Supabase Auth and scopes all data operations to
+that account's UUID. Keep the backend private to trusted callers and enable HTTPS
+in deployed environments. Existing paths with no owner remain hidden until you
+assign them to an account as described in Configure sign-in.
 
 ### Database design
 

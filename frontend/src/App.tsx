@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sprout, X } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sprout, X } from 'lucide-react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
 import { PathCard } from './components/PathCard'
 import { PathDialog, type EditorState } from './components/PathDialog'
 import { TopicWorkspace } from './components/TopicWorkspace'
 import { NoteEditor } from './components/NoteEditor'
+import { AuthPage } from './components/AuthPage'
+import { useAuth } from './auth/AuthProvider'
 import * as pathsApi from './services/paths'
 import { pathProgress, pathStatus, type LearningPath, type PathInput } from './types'
 
@@ -15,6 +17,7 @@ const filters: { id: Filter; label: string }[] = [{ id: 'all', label: 'All paths
 function Brand() { return <Link to="/" className="brand" aria-label="StudyForge home"><span className="brand-mark"><Bookmark size={21} strokeWidth={1.7} /></span><span>Study<span className="brand-light">Forge</span><span className="brand-period">.</span></span></Link> }
 
 export default function App() {
+  const { session, user, loading: authLoading, signOut } = useAuth()
   const [paths, setPaths] = useState<LearningPath[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -22,6 +25,8 @@ export default function App() {
   const [saving, setSaving] = useState(false)
   const [mutationError, setMutationError] = useState('')
   useEffect(() => {
+    if (authLoading) return
+    if (!session) { setPaths([]); setLoading(false); return }
     const controller = new AbortController()
     setLoading(true)
     setLoadError('')
@@ -31,7 +36,7 @@ export default function App() {
       if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'Could not load learning paths.')
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [reload])
+  }, [reload, session?.access_token, authLoading])
   const [editor, setEditor] = useState<EditorState>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -41,6 +46,8 @@ export default function App() {
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer) }, [toast])
   useEffect(() => setMutationError(''), [editor])
+  if (authLoading) return <div className="auth-loading" role="status">Opening your learning space…</div>
+  if (!session) return <AuthPage />
   const edit = (path: LearningPath) => setEditor({ mode: 'edit', path })
   const remove = (path: LearningPath) => setEditor({ mode: 'delete', path })
   async function save(input: PathInput, id?: string) {
@@ -86,7 +93,7 @@ export default function App() {
     <a href="#main-content" className="skip-link">Skip to content</a>
     <aside className="sidebar">{sidebar()}</aside>
     <div className="main-shell">
-      <header className="topbar"><div className="topbar-left"><button className="icon-button desktop-collapse" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><span className="topbar-breadcrumb">Workspace <ChevronRight size={13} /> <span>Learning paths</span></span></div><span className="local-badge"><span /> Personal edition</span></header>
+      <header className="topbar"><div className="topbar-left"><button className="icon-button desktop-collapse" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><span className="topbar-breadcrumb">Workspace <ChevronRight size={13} /> <span>Learning paths</span></span></div><div className="topbar-account"><span className="local-badge"><span /> {user?.email}</span><button className="icon-button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut size={16} /></button></div></header>
       <main id="main-content" tabIndex={-1}>
         {loading ? <div className="page loading-state" role="status" aria-live="polite"><p>Loading your learning pathsâ€¦</p><div className="path-grid" aria-hidden="true">{[1, 2, 3].map(id => <div className="skeleton-card" key={id} />)}</div></div> : loadError ? <div className="page empty-state"><h1>Let's reconnect your workspace.</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <Routes><Route path="/" element={<Dashboard paths={paths} onCreate={() => setEditor({ mode: 'create' })} onEdit={edit} onDelete={remove} />} /><Route path="/paths/:pathId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId/notes/:noteId" element={<NoteEditor />} /><Route path="*" element={<NotFound />} /></Routes>}
       </main>

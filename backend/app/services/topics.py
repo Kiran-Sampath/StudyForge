@@ -1,20 +1,21 @@
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.models import LearningPath, Topic
 from app.schemas.topic import TopicCreate, TopicUpdate
 
 
-def get_topic(db: Session, topic_id: int) -> Topic:
-    topic = db.get(Topic, topic_id)
+def get_topic(db: Session, topic_id: int, owner_id: UUID) -> Topic:
+    topic = db.scalar(select(Topic).join(LearningPath).where(Topic.id == topic_id, LearningPath.owner_id == owner_id))
     if topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
     return topic
 
 
-def list_topics(db: Session, path_id: int, limit: int, offset: int) -> list[Topic]:
-    if db.get(LearningPath, path_id) is None:
+def list_topics(db: Session, path_id: int, owner_id: UUID, limit: int, offset: int) -> list[Topic]:
+    if db.scalar(select(LearningPath.id).where(LearningPath.id == path_id, LearningPath.owner_id == owner_id)) is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     return list(db.scalars(
         select(Topic).where(Topic.learning_path_id == path_id)
@@ -22,9 +23,9 @@ def list_topics(db: Session, path_id: int, limit: int, offset: int) -> list[Topi
     ))
 
 
-def create_topic(db: Session, path_id: int, data: TopicCreate) -> Topic:
+def create_topic(db: Session, path_id: int, data: TopicCreate, owner_id: UUID) -> Topic:
     # Lock the parent so two concurrent appends cannot calculate the same position.
-    parent = db.scalar(select(LearningPath).where(LearningPath.id == path_id).with_for_update())
+    parent = db.scalar(select(LearningPath).where(LearningPath.id == path_id, LearningPath.owner_id == owner_id).with_for_update())
     if parent is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     position = db.scalar(
@@ -40,8 +41,8 @@ def create_topic(db: Session, path_id: int, data: TopicCreate) -> Topic:
     return topic
 
 
-def update_topic(db: Session, topic_id: int, data: TopicUpdate) -> Topic:
-    topic = get_topic(db, topic_id)
+def update_topic(db: Session, topic_id: int, data: TopicUpdate, owner_id: UUID) -> Topic:
+    topic = get_topic(db, topic_id, owner_id)
     for name, value in data.model_dump(exclude_unset=True).items():
         setattr(topic, name, value)
     db.commit()
@@ -49,7 +50,7 @@ def update_topic(db: Session, topic_id: int, data: TopicUpdate) -> Topic:
     return topic
 
 
-def delete_topic(db: Session, topic_id: int) -> None:
-    topic = get_topic(db, topic_id)
+def delete_topic(db: Session, topic_id: int, owner_id: UUID) -> None:
+    topic = get_topic(db, topic_id, owner_id)
     db.delete(topic)
     db.commit()

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from uuid import UUID
 
 from alembic import command
 from alembic.config import Config
@@ -9,6 +10,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.security import get_current_user
 from app.main import app
 
 
@@ -47,6 +49,7 @@ def client(database):
             yield session
 
     app.dependency_overrides[get_db] = test_session
+    app.dependency_overrides[get_current_user] = lambda: UUID("00000000-0000-0000-0000-000000000001")
     try:
         with TestClient(app) as test_client:
             yield test_client

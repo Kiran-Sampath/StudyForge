@@ -1,10 +1,12 @@
 import pytest
+from uuid import UUID
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.security import get_current_user
 from app.main import app
 from app.models import LearningPath, Topic, Note, TopicStatus
 
@@ -30,6 +32,22 @@ def test_create_read_update_delete(client):
     assert client.delete(url).status_code == 204
     assert client.get(url).status_code == 404
     assert client.get("/api/paths").json() == []
+
+
+def test_path_and_child_records_are_private_to_the_owner(client):
+    path = client.post("/api/paths", json={"title": "Private"}).json()
+    topic = client.post(f"/api/paths/{path['id']}/topics", json={"title": "Owned topic"}).json()
+    note = client.post(f"/api/topics/{topic['id']}/notes", json={"title": "Owned note"}).json()
+    previous = app.dependency_overrides[get_current_user]
+    app.dependency_overrides[get_current_user] = lambda: UUID("00000000-0000-0000-0000-000000000002")
+    try:
+        assert client.get("/api/paths").json() == []
+        assert client.get(f"/api/paths/{path['id']}").status_code == 404
+        assert client.get(f"/api/paths/{path['id']}/topics").status_code == 404
+        assert client.get(f"/api/topics/{topic['id']}").status_code == 404
+        assert client.get(f"/api/notes/{note['id']}").status_code == 404
+    finally:
+        app.dependency_overrides[get_current_user] = previous
 
 
 @pytest.mark.parametrize("body", [{}, {"title": ""}, {"title": " \t\n "}, {"title": None},
@@ -97,6 +115,7 @@ def test_database_errors_do_not_leak_details():
         raise SQLAlchemyError("sensitive connection details")
 
     app.dependency_overrides[get_db] = unavailable
+    app.dependency_overrides[get_current_user] = lambda: UUID("00000000-0000-0000-0000-000000000001")
     try:
         with TestClient(app) as client:
             response = client.get("/api/paths")

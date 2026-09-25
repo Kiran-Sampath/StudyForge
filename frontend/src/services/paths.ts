@@ -1,4 +1,5 @@
 import type { LearningPath, LearningPathResponse, PathInput } from '../types'
+import { supabase } from './supabase'
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message) }
@@ -7,7 +8,11 @@ export class ApiError extends Error {
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   let response: Response
   try {
-    response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } })
+    const headers = new Headers(options.headers)
+    if (!(options.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+    if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+    response = await fetch(url, { ...options, headers })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError('Could not reach StudyForge. Check that the backend is running and try again.', 0)

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     db_user: str = Field(min_length=1)
     db_password: SecretStr
     db_sslmode: Literal["disable", "require", "verify-ca", "verify-full"] = "require"
+    supabase_url: str = ""
+    supabase_anon_key: SecretStr = SecretStr("")
 
     @property
     def database_url(self) -> URL:

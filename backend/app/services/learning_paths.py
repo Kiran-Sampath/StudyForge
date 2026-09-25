@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.models import LearningPath, Topic, TopicStatus
 from app.schemas.learning_path import LearningPathCreate, LearningPathResponse, LearningPathUpdate
@@ -26,37 +27,37 @@ def serialize(row) -> LearningPathResponse:
     )
 
 
-def list_paths(db: Session, limit: int, offset: int):
-    rows = db.execute(summary_query().order_by(LearningPath.created_at.desc(), LearningPath.id.desc()).limit(limit).offset(offset))
+def list_paths(db: Session, owner_id: UUID, limit: int, offset: int):
+    rows = db.execute(summary_query().where(LearningPath.owner_id == owner_id).order_by(LearningPath.created_at.desc(), LearningPath.id.desc()).limit(limit).offset(offset))
     return [serialize(row) for row in rows]
 
 
-def get_path(db: Session, path_id: int):
-    row = db.execute(summary_query().where(LearningPath.id == path_id)).one_or_none()
+def get_path(db: Session, path_id: int, owner_id: UUID):
+    row = db.execute(summary_query().where(LearningPath.id == path_id, LearningPath.owner_id == owner_id)).one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     return serialize(row)
 
 
-def create_path(db: Session, data: LearningPathCreate):
-    path = LearningPath(**data.model_dump())
+def create_path(db: Session, data: LearningPathCreate, owner_id: UUID):
+    path = LearningPath(owner_id=owner_id, **data.model_dump())
     db.add(path)
     db.commit()
-    return get_path(db, path.id)
+    return get_path(db, path.id, owner_id)
 
 
-def update_path(db: Session, path_id: int, data: LearningPathUpdate):
-    path = db.get(LearningPath, path_id)
+def update_path(db: Session, path_id: int, data: LearningPathUpdate, owner_id: UUID):
+    path = db.scalar(select(LearningPath).where(LearningPath.id == path_id, LearningPath.owner_id == owner_id))
     if path is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     for name, value in data.model_dump(exclude_unset=True).items():
         setattr(path, name, value)
     db.commit()
-    return get_path(db, path_id)
+    return get_path(db, path_id, owner_id)
 
 
-def delete_path(db: Session, path_id: int):
-    path = db.get(LearningPath, path_id)
+def delete_path(db: Session, path_id: int, owner_id: UUID):
+    path = db.scalar(select(LearningPath).where(LearningPath.id == path_id, LearningPath.owner_id == owner_id))
     if path is None:
         raise HTTPException(status_code=404, detail="Learning path not found")
     db.delete(path)

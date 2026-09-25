@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { AuthProvider } from './auth/AuthProvider'
 import { mockPathApi } from './test/fixtures'
 
 beforeEach(() => {
@@ -15,7 +16,7 @@ beforeEach(() => {
 
 async function setup(route = '/') {
   const user = userEvent.setup()
-  render(<MemoryRouter initialEntries={[route]}><App /></MemoryRouter>)
+  render(<AuthProvider><MemoryRouter initialEntries={[route]}><App /></MemoryRouter></AuthProvider>)
   await screen.findByRole('heading', { level: 1 })
   return user
 }

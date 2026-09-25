@@ -2,12 +2,21 @@ import { test, expect } from '@playwright/test'
 import { mockPathApi } from '../src/test/fixtures'
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem('studyforge-e2e-auth', 'enabled'))
   const api = mockPathApi()
   await page.route(/\/api\/(?:paths|topics|notes)(?:\/|\?|$)/, async route => {
     const request = route.request()
     const response = api(request.url(), request.method(), request.postData() ?? '')
     await route.fulfill({ status: response.status, contentType: 'application/json', body: response.status === 204 ? undefined : JSON.stringify(response.body) })
   })
+})
+
+test('sign out returns the visitor to the account screen', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'A little more understanding.' })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
+  await expect(page.getByText(/Supabase Auth isn’t configured yet/)).toBeVisible()
 })
 
 test('desktop dashboard supports creating, editing, and deleting a learning path', async ({ page }) => {
