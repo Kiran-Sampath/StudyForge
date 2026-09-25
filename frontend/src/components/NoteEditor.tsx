@@ -214,8 +214,9 @@ export function NoteEditor() {
   }
 
   async function uploadImage(event: React.FormEvent<HTMLFormElement>) {
+    const form = event.currentTarget
     event.preventDefault()
-    const input = event.currentTarget.elements.namedItem('note-image-file')
+    const input = form.elements.namedItem('note-image-file')
     const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined
     if (!file || !note) return
     if (images.length >= 10) { setImageError('A note can have up to 10 images.'); return }
@@ -225,7 +226,7 @@ export function NoteEditor() {
       const added = await api.uploadNoteImage(note.id, file, imageAltText)
       setImages(current => [...current, added])
       setImageAltText('')
-      event.currentTarget.reset()
+      form.reset()
     } catch (reason) {
       setImageError(reason instanceof Error ? reason.message : 'Could not upload image.')
     } finally { setImageBusy(false) }

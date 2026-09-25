@@ -32,6 +32,7 @@ export function mockPathApi() {
   let nextId = 100
   let nextTopicId = 1000
   let notes: Note[] = []
+  let noteImages: import('../types').NoteImage[] = []
   let nextNoteId = 1
   function updateSummary(pathId: number) {
     const path = records.find(record => record.id === pathId)
@@ -46,7 +47,8 @@ export function mockPathApi() {
     const parsed = new URL(url, 'http://localhost')
     const segments = parsed.pathname.split('/')
     const id = Number(segments[3])
-    const input = body ? JSON.parse(body) : {}
+    let input: { [key: string]: any } = {}
+    try { input = body ? JSON.parse(body) : {} } catch { /* Multipart image forms have a different body format. */ }
     if (segments[2] === 'topics' && segments[4] === 'notes') {
       if (!topics.some(topic => topic.id === id)) return { status: 404, body: { detail: 'Topic not found' } }
       if (method === 'GET') return { status: 200, body: notes.filter(note => note.topic_id === id).slice(Number(parsed.searchParams.get('offset') ?? 0)) }
@@ -59,7 +61,13 @@ export function mockPathApi() {
     }
     if (segments[2] === 'notes') {
       if (segments[4] === 'images') {
-        if (method === 'GET') return { status: 200, body: [] }
+        if (method === 'GET') return { status: 200, body: noteImages.filter(image => image.note_id === id) }
+        if (method === 'POST') {
+          const uploaded: import('../types').NoteImage = { id: noteImages.length + 1, note_id: id, filename: 'diagram.png', content_type: 'image/png', size_bytes: 12, alt_text: null, url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pJcAAAAASUVORK5CYII=' }
+          noteImages.push(uploaded)
+          return { status: 201, body: uploaded }
+        }
+        if (method === 'DELETE') { noteImages = noteImages.filter(image => image.id !== Number(segments[5])); return { status: 204, body: null } }
         return { status: 404, body: { detail: 'Image not found' } }
       }
       const note = notes.find(item => item.id === id)

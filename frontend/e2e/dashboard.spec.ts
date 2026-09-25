@@ -116,6 +116,19 @@ test('notes save, preview Markdown safely, and survive refresh', async ({ page }
   await expect(page.getByRole('link', { name: /Routing notes/ })).toBeVisible()
 })
 
+test('note image upload resets the form after the async request', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await page.getByRole('textbox', { name: 'Note title' }).fill('Image notes')
+  await page.getByRole('button', { name: 'Save note' }).click()
+  const file = page.getByLabel('Image file')
+  await file.setInputFiles({ name: 'diagram.png', mimeType: 'image/png', buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]) })
+  await page.getByRole('button', { name: 'Upload image' }).click()
+  await expect(page.getByRole('img', { name: 'diagram.png' })).toBeVisible()
+  await expect(file).toHaveValue('')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
 test('plain text notes keep formatting literal and save multiple learning links', async ({ page }) => {
   await page.goto('/paths/5/topics/501')
   await page.getByRole('button', { name: 'New note' }).click()
