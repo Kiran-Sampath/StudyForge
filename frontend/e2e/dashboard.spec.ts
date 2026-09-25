@@ -206,8 +206,11 @@ test('code block insertion is available in plain text and preserves the selected
   await page.getByLabel('Code language').selectOption('python')
   await page.getByRole('button', { name: 'Insert block' }).click()
   await expect(editor).toHaveValue('```python\nprint("hello")\n```')
-  await expect(page.getByRole('region', { name: 'Plain text preview' })).toContainText('```python')
-  await expect(page.getByRole('region', { name: 'Plain text preview' }).locator('.preview-code-block')).toHaveCount(0)
+  const plainPreview = page.getByRole('region', { name: 'Plain text preview' })
+  await expect(plainPreview.getByText('python', { exact: true })).toBeVisible()
+  await expect(plainPreview.locator('.hljs')).toHaveCount(1)
+  await expect(plainPreview.getByRole('button', { name: 'Copy code' })).toBeVisible()
+  await expect(plainPreview).not.toContainText('```')
   await page.getByRole('radio', { name: 'Markdown' }).check()
   const preview = page.getByRole('region', { name: 'Markdown preview' })
   await expect(preview.getByText('python', { exact: true })).toBeVisible()
@@ -215,9 +218,10 @@ test('code block insertion is available in plain text and preserves the selected
   await expect(preview.getByRole('button', { name: 'Copy code' })).toBeVisible()
 })
 
-test('note cards render fenced code as a compact syntax-highlighted preview', async ({ page }) => {
+test('plain-text note cards render fenced code as a compact syntax-highlighted preview', async ({ page }) => {
   await page.goto('/paths/5/topics/501')
   await page.getByRole('button', { name: 'New note' }).click()
+  await page.getByRole('radio', { name: 'Plain text' }).check()
   await page.getByRole('textbox', { name: 'Note title' }).fill('Java snippet')
   await page.getByRole('textbox', { name: 'Note content' }).fill('```java\npublic int main() {\n  return 42;\n}\n```')
   await expect(page.getByText('Saved automatically')).toBeVisible()
