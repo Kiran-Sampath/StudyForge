@@ -24,7 +24,7 @@ export function NotesPanel({ pathId, topicId }: { pathId: string; topicId: numbe
     if (busy) return
     setBusy(true); setError('')
     try {
-      const note = await api.createNote(topicId, { title: 'Untitled note', content: '', format: 'markdown', links: [] })
+      const note = await api.createNote(topicId, { title: 'Untitled note', content: '', format: 'markdown', links: [], key_takeaway: null, revisit_question: null, confidence: null })
       navigate(`/paths/${pathId}/topics/${topicId}/notes/${note.id}`)
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not create note.') }
     finally { setBusy(false) }

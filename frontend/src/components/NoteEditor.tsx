@@ -1,18 +1,18 @@
 import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
-import { ArrowLeft, Bold, Check, Code2, Columns2, Copy, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bold, Check, ChevronDown, Code2, Columns2, Copy, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { Link, useBlocker, useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import 'highlight.js/styles/github.css'
 import * as api from '../services/notes'
-import type { Note, NoteFormat, NoteInput, NoteLink } from '../types'
+import type { ConfidenceLevel, Note, NoteFormat, NoteInput, NoteLink } from '../types'
 
 type EditorLayout = 'write' | 'split' | 'preview'
 type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 
 function sameInput(left: NoteInput, right: NoteInput) {
-  return left.title === right.title && left.content === right.content && left.format === right.format && JSON.stringify(left.links) === JSON.stringify(right.links)
+  return left.title === right.title && left.content === right.content && left.format === right.format && JSON.stringify(left.links) === JSON.stringify(right.links) && left.key_takeaway === right.key_takeaway && left.revisit_question === right.revisit_question && left.confidence === right.confidence
 }
 
 function nodeText(node: ReactNode): string {
@@ -64,14 +64,18 @@ export function NoteEditor() {
   const [linkLabel, setLinkLabel] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
   const [linkError, setLinkError] = useState('')
-  const [saved, setSaved] = useState<NoteInput>({ title: '', content: '', format: 'markdown', links: [] })
+  const [keyTakeaway, setKeyTakeaway] = useState('')
+  const [revisitQuestion, setRevisitQuestion] = useState('')
+  const [confidence, setConfidence] = useState<ConfidenceLevel | null>(null)
+  const [learningCheckOpen, setLearningCheckOpen] = useState(false)
+  const [saved, setSaved] = useState<NoteInput>({ title: '', content: '', format: 'markdown', links: [], key_takeaway: null, revisit_question: null, confidence: null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [layout, setLayout] = useState<EditorLayout>('split')
   const textarea = useRef<HTMLTextAreaElement>(null)
-  const draft: NoteInput = { title, content, format, links }
+  const draft: NoteInput = { title, content, format, links, key_takeaway: keyTakeaway || null, revisit_question: revisitQuestion || null, confidence }
   const latestDraft = useRef(draft)
   const savedDraft = useRef(saved)
   const savingRef = useRef(false)
@@ -88,12 +92,16 @@ export function NoteEditor() {
     api.getNote(Number(noteId), controller.signal).then(item => {
       if (controller.signal.aborted) return
       if (item.topic_id !== Number(topicId)) { setError('Note not found.'); return }
-      const input = { title: item.title, content: item.content, format: item.format, links: item.links }
+      const input = { title: item.title, content: item.content, format: item.format, links: item.links, key_takeaway: item.key_takeaway, revisit_question: item.revisit_question, confidence: item.confidence }
       setNote(item)
       setTitle(item.title)
       setContent(item.content)
       setFormat(item.format)
       setLinks(item.links)
+      setKeyTakeaway(item.key_takeaway ?? '')
+      setRevisitQuestion(item.revisit_question ?? '')
+      setConfidence(item.confidence)
+      setLearningCheckOpen(Boolean(item.key_takeaway || item.revisit_question || item.confidence))
       setSaved(input)
       setSaveStatus('saved')
     }).catch(reason => {
@@ -115,7 +123,8 @@ export function NoteEditor() {
     if (!note) return
     if (!latestDraft.current.title.trim()) { setError('Add a title before saving.'); return }
     if (savingRef.current) { saveAgain.current = true; return }
-    const submitted = { ...latestDraft.current, title: latestDraft.current.title.trim(), links: [...latestDraft.current.links] }
+    const rawDraft = latestDraft.current
+    const submitted = { ...rawDraft, title: rawDraft.title.trim(), links: [...rawDraft.links], key_takeaway: rawDraft.key_takeaway?.trim() || null, revisit_question: rawDraft.revisit_question?.trim() || null }
     if (sameInput(submitted, savedDraft.current)) return
     savingRef.current = true
     setSaving(true)
@@ -124,9 +133,15 @@ export function NoteEditor() {
     let succeeded = false
     try {
       const updated = await api.updateNote(note.id, submitted)
-      const persisted = { title: updated.title, content: updated.content, format: updated.format, links: updated.links }
+      const persisted = { title: updated.title, content: updated.content, format: updated.format, links: updated.links, key_takeaway: updated.key_takeaway, revisit_question: updated.revisit_question, confidence: updated.confidence }
       setNote(updated)
-      setTitle(current => current === submitted.title ? updated.title : current)
+      const draftWasUnchanged = sameInput(latestDraft.current, rawDraft)
+      if (draftWasUnchanged) {
+        latestDraft.current = persisted
+        setTitle(updated.title)
+        setKeyTakeaway(updated.key_takeaway ?? '')
+        setRevisitQuestion(updated.revisit_question ?? '')
+      }
       setSaved(persisted)
       savedDraft.current = persisted
       succeeded = true
@@ -153,7 +168,7 @@ export function NoteEditor() {
     setSaveStatus(current => current === 'saving' ? current : 'unsaved')
     const timer = window.setTimeout(() => { void save() }, 900)
     return () => window.clearTimeout(timer)
-  }, [note, dirty, title, content, format, links, save])
+  }, [note, dirty, title, content, format, links, keyTakeaway, revisitQuestion, confidence, save])
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -217,6 +232,10 @@ export function NoteEditor() {
         <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: PreviewCodeBlock }} skipHtml>{content}</ReactMarkdown> : <div className="note-plain-preview">{content}</div> : <p className="preview-empty">Your preview will appear here as you write.</p>}</div>
       </section>
     </div>
+    <section className={`learning-check ${learningCheckOpen ? 'open' : ''}`} aria-labelledby="learning-check-heading">
+      <button className="learning-check-toggle" type="button" aria-expanded={learningCheckOpen} aria-controls="learning-check-fields" onClick={() => setLearningCheckOpen(open => !open)}><span className="learning-check-icon"><Sparkles size={18} /></span><span><strong id="learning-check-heading">Learning Check</strong><small>Optional reflection for your future self</small></span><span className="optional-label">OPTIONAL</span><ChevronDown size={17} className="learning-check-chevron" /></button>
+      {learningCheckOpen && <div className="learning-check-fields" id="learning-check-fields"><label>Key takeaway<textarea maxLength={5000} value={keyTakeaway} onChange={event => setKeyTakeaway(event.target.value)} placeholder="What is the most important idea from this note?" /></label><label>Question to revisit<textarea maxLength={5000} value={revisitQuestion} onChange={event => setRevisitQuestion(event.target.value)} placeholder="What should you come back to or investigate further?" /></label><fieldset><legend>Confidence level</legend><div className="confidence-options"><label className={confidence === 'STILL_LEARNING' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'STILL_LEARNING'} onChange={() => setConfidence('STILL_LEARNING')} /> Still Learning</label><label className={confidence === 'NEED_MORE_PRACTICE' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'NEED_MORE_PRACTICE'} onChange={() => setConfidence('NEED_MORE_PRACTICE')} /> Need More Practice</label><label className={confidence === 'CONFIDENT' ? 'selected' : ''}><input type="radio" name="confidence" checked={confidence === 'CONFIDENT'} onChange={() => setConfidence('CONFIDENT')} /> Confident</label>{confidence && <button type="button" onClick={() => setConfidence(null)}>Clear</button>}</div></fieldset></div>}
+    </section>
     <section className="note-resources" aria-labelledby="resources-heading"><div className="note-resources-heading"><div><h2 id="resources-heading">Learning links</h2><p>Keep articles, repositories, videos, and other material beside your note.</p></div><span>{links.length} / 30</span></div><form className="note-link-form" onSubmit={addLink}><label>Link title <span>optional</span><input value={linkLabel} maxLength={120} onChange={event => setLinkLabel(event.target.value)} placeholder="e.g. Official documentation" /></label><label>URL<input type="url" required value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError('') }} placeholder="https://…" /></label><button className="button secondary" type="submit"><Plus size={16} /> Add link</button></form>{linkError && <p className="request-error" role="alert">{linkError}</p>}{links.length ? <ul className="note-link-list">{links.map((link, index) => <li key={`${link.url}-${index}`}><span className="note-link-icon"><ExternalLink size={18} /></span><div><a href={link.url} target="_blank" rel="noopener noreferrer">{link.label || new URL(link.url).hostname} <ExternalLink size={13} /></a><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></div><button className="icon-button" aria-label={`Remove ${link.label || link.url}`} onClick={() => setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={16} /></button></li>)}</ul> : <p className="note-links-empty">No links yet. Add a URL above to keep it with this note.</p>}</section>
     {blocker.state === 'blocked' && <div className="note-leave-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-title"><div className="note-leave-dialog"><h2 id="leave-title">Leave without saving?</h2><p>Your latest changes will be lost.</p><div><button className="button secondary" onClick={() => blocker.reset()}>Keep editing</button><button className="button primary" onClick={() => blocker.proceed()}>Discard changes</button></div></div></div>}
   </div>

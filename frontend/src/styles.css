@@ -227,5 +227,25 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-link-list a:hover { text-decoration: underline; }
 .note-link-list small { display: block; margin-top: 3px; color: #8b9a8e; overflow-wrap: anywhere; }
 .note-links-empty { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid #eff1ed; color: #9aaa9c; font-size: 13px; }
+.learning-check { margin-top: 24px; overflow: hidden; border: 1px solid #e1e7df; border-radius: 16px; background: #fff; }
+.learning-check-toggle { display: flex; align-items: center; gap: 13px; width: 100%; padding: 20px 24px; border: 0; background: transparent; color: #2c4033; text-align: left; cursor: pointer; }
+.learning-check-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 11px; background: #edf4ed; color: #4f7759; }
+.learning-check-toggle>span:nth-child(2) { display: grid; gap: 3px; flex: 1; }
+.learning-check-toggle strong { font-size: 16px; }
+.learning-check-toggle small { color: #839087; font-size: 12px; font-weight: 400; }
+.optional-label { padding: 4px 7px; border-radius: 5px; background: #f1f3ef; color: #8b968e; font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.learning-check-chevron { transition: transform .2s ease; }
+.learning-check.open .learning-check-chevron { transform: rotate(180deg); }
+.learning-check-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 0 24px 24px; border-top: 1px solid #eef1ec; padding-top: 22px; }
+.learning-check-fields>label { display: grid; gap: 8px; color: #52665a; font-size: 12px; font-weight: 700; }
+.learning-check-fields textarea { box-sizing: border-box; width: 100%; min-height: 104px; resize: vertical; padding: 12px 13px; border: 1px solid #dfe7df; border-radius: 9px; outline-color: #7ca687; font: 14px/1.55 inherit; color: #324238; }
+.learning-check-fields fieldset { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
+.learning-check-fields legend { margin-bottom: 9px; color: #52665a; font-size: 12px; font-weight: 700; }
+.confidence-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.confidence-options label { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #dfe7df; border-radius: 9px; color: #68766d; cursor: pointer; font-size: 12px; }
+.confidence-options label.selected { border-color: #9bb99f; background: #eaf2e9; color: #285a3a; }
+.confidence-options input { accent-color: #326c46; }
+.confidence-options>button { padding: 7px; border: 0; background: transparent; color: #7b887f; cursor: pointer; font-size: 12px; text-decoration: underline; }
 @media(max-width:700px) { .note-link-form { grid-template-columns: 1fr; }.note-link-form .button { justify-self: start; }.note-resources { padding: 22px; }.note-format-picker>span { width: 100%; margin: 0 0 0 4px; } }
+@media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; } }
 @media(max-width:800px) { .note-header { align-items: flex-start; }.note-header input { font-size: 28px; }.note-editor-grid { grid-template-columns: 1fr; }.note-editor-grid.layout-split .note-preview { margin-top: 14px; }.note-layout-picker { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }.note-layout-picker button { flex: none; } }

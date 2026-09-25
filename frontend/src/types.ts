@@ -1,9 +1,10 @@
 export type TopicStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
 
 export type NoteFormat = 'markdown' | 'plain'
+export type ConfidenceLevel = 'STILL_LEARNING' | 'NEED_MORE_PRACTICE' | 'CONFIDENT'
 export interface NoteLink { label: string; url: string }
-export interface Note { id: number; topic_id: number; title: string; content: string; format: NoteFormat; links: NoteLink[]; created_at: string; updated_at: string }
-export type NoteInput = Pick<Note, 'title' | 'content' | 'format' | 'links'>
+export interface Note { id: number; topic_id: number; title: string; content: string; format: NoteFormat; links: NoteLink[]; key_takeaway: string | null; revisit_question: string | null; confidence: ConfidenceLevel | null; created_at: string; updated_at: string }
+export type NoteInput = Pick<Note, 'title' | 'content' | 'format' | 'links' | 'key_takeaway' | 'revisit_question' | 'confidence'>
 
 export interface Topic {
   id: number

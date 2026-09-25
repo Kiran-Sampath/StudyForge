@@ -7,6 +7,8 @@ from app.schemas.learning_path import Title
 
 Content = Annotated[str, StringConstraints(max_length=200000)]
 NoteFormat = Literal["markdown", "plain"]
+ConfidenceLevel = Literal["STILL_LEARNING", "NEED_MORE_PRACTICE", "CONFIDENT"]
+LearningCheckText = Annotated[str, StringConstraints(max_length=5000)]
 
 
 class NoteLink(BaseModel):
@@ -29,6 +31,16 @@ class NoteCreate(BaseModel):
     content: Content = ""
     format: NoteFormat = "markdown"
     links: NoteLinks = Field(default_factory=list)
+    key_takeaway: LearningCheckText | None = None
+    revisit_question: LearningCheckText | None = None
+    confidence: ConfidenceLevel | None = None
+
+    @field_validator("key_takeaway", "revisit_question")
+    @classmethod
+    def normalize_learning_check(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
 
 
 class NoteUpdate(BaseModel):
@@ -37,6 +49,16 @@ class NoteUpdate(BaseModel):
     content: Content | None = None
     format: NoteFormat | None = None
     links: NoteLinks | None = None
+    key_takeaway: LearningCheckText | None = None
+    revisit_question: LearningCheckText | None = None
+    confidence: ConfidenceLevel | None = None
+
+    @field_validator("key_takeaway", "revisit_question")
+    @classmethod
+    def normalize_learning_check(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
 
     @model_validator(mode="after")
     def validate_update(self):
@@ -56,5 +78,8 @@ class NoteResponse(BaseModel):
     content: str
     format: NoteFormat
     links: list[NoteLink]
+    key_takeaway: str | None
+    revisit_question: str | None
+    confidence: ConfidenceLevel | None
     created_at: datetime
     updated_at: datetime

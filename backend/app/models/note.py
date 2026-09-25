@@ -17,6 +17,7 @@ class Note(Timestamps, Base):
     __table_args__ = (
         CheckConstraint("length(trim(title)) > 0", name="title_not_blank"),
         CheckConstraint("format IN ('markdown', 'plain')", name="valid_format"),
+        CheckConstraint("confidence IS NULL OR confidence IN ('STILL_LEARNING', 'NEED_MORE_PRACTICE', 'CONFIDENT')", name="valid_confidence"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -27,4 +28,7 @@ class Note(Timestamps, Base):
     content: Mapped[str] = mapped_column(Text, default="", server_default="")
     format: Mapped[str] = mapped_column(String(16), default="markdown", server_default="markdown")
     links: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    key_takeaway: Mapped[str | None] = mapped_column(Text)
+    revisit_question: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[str | None] = mapped_column(String(24))
     topic: Mapped[Topic] = relationship(back_populates="notes")
