@@ -15,7 +15,7 @@ below and apply the Alembic migration. Start FastAPI in one terminal from
 `backend`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
 Then start the frontend in another terminal from the repository root:
@@ -91,7 +91,7 @@ The UI uses React, TypeScript, React Router, Vite, Tailwind CSS, Lucide icons, a
 Radix dialogs/menus for keyboard navigation and focus handling. Design styles
 live in `frontend/src/styles.css`; the API client lives in
 `frontend/src/services/paths.ts`. Vite proxies `/api` requests to FastAPI on
-port 8000 during development. DM Sans and Manrope load from Google Fonts,
+port 8001 during development. DM Sans and Manrope load from Google Fonts,
 with system font fallbacks when offline. Supabase Auth supports email/password,
 Google, and GitHub sign-in; FastAPI verifies each bearer session with Supabase
 and filters every learning path, topic, and note request by account owner.
@@ -118,7 +118,7 @@ To verify manually, create a path, edit its title from its menu, filter the
 dashboard, open a path, add topics, change their statuses, and inspect the
 updated progress. Resize below 640px to inspect the single-column layout.
 Refresh to confirm topics and progress persist. The
-API contract is available at <http://127.0.0.1:8000/docs>.
+API contract is available at <http://127.0.0.1:8001/docs>.
 
 The learning-path API provides `GET`/`POST /api/paths` and
 `GET`/`PATCH`/`DELETE /api/paths/{path_id}`. List responses are bounded to 100
@@ -171,20 +171,20 @@ also installs the testing dependencies.
 From `backend`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
 Uvicorn serves the FastAPI application. `app.main:app` points to the `app` object
 in `app/main.py`; `--reload` restarts the server when code changes during development.
 Press Ctrl+C to stop it.
 
-- Health endpoint: <http://127.0.0.1:8000/api/health>
-- Interactive API documentation: <http://127.0.0.1:8000/docs>
+- Health endpoint: <http://127.0.0.1:8001/api/health>
+- Interactive API documentation: <http://127.0.0.1:8001/docs>
 
 In a second PowerShell window, verify the endpoint:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/health
+Invoke-RestMethod http://127.0.0.1:8001/api/health
 ```
 
 The endpoint returns HTTP `200` and JSON `{"status":"ok"}`. PowerShell displays
