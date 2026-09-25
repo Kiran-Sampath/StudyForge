@@ -179,6 +179,13 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-toolbar { display: flex; gap: 4px; padding: 9px 15px; border-bottom: 1px solid #edf0ea; }
 .note-toolbar button { background: transparent; border: 0; border-radius: 7px; padding: 8px; color: #56675b; cursor: pointer; }
 .note-toolbar button:hover,.note-toolbar button:focus-visible { background: #edf3ed; }
+.note-code-inserter { position: relative; display: flex; justify-content: flex-end; padding: 8px 15px; border-bottom: 1px solid #edf0ea; }
+.note-code-trigger { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #dfe7df; border-radius: 8px; background: #fff; color: #506456; cursor: pointer; font-size: 12px; }
+.note-code-trigger:hover,.note-code-trigger:focus-visible { background: #edf4ed; }
+.note-code-options { position: absolute; z-index: 4; top: calc(100% - 2px); right: 14px; display: flex; align-items: flex-end; gap: 10px; width: min(360px,calc(100vw - 56px)); padding: 14px; border: 1px solid #dce5dc; border-radius: 11px; background: #fff; box-shadow: 0 14px 38px #1c30241c; }
+.note-code-options label { display: grid; flex: 1; gap: 6px; color: #52665a; font-size: 11px; font-weight: 700; }
+.note-code-options select { min-width: 0; width: 100%; padding: 9px 10px; border: 1px solid #dfe7df; border-radius: 8px; background: white; color: #324238; font: inherit; font-size: 13px; }
+.note-code-options .button { min-height: 36px; padding: 8px 11px; white-space: nowrap; }
 .note-write textarea { box-sizing: border-box; display: block; width: 100%; min-height: calc(65vh - 96px); padding: 24px; resize: vertical; border: 0; outline: none; font: 15px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace; color: #2a392f; }
 .markdown-body { padding: 25px 30px; line-height: 1.75; overflow-wrap: anywhere; }
 .markdown-body :first-child { margin-top: 0; }
@@ -247,5 +254,5 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .confidence-options input { accent-color: #326c46; }
 .confidence-options>button { padding: 7px; border: 0; background: transparent; color: #7b887f; cursor: pointer; font-size: 12px; text-decoration: underline; }
 @media(max-width:700px) { .note-link-form { grid-template-columns: 1fr; }.note-link-form .button { justify-self: start; }.note-resources { padding: 22px; }.note-format-picker>span { width: 100%; margin: 0 0 0 4px; } }
-@media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; } }
+@media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; }.note-code-options { flex-wrap: wrap; }.note-code-options label { flex-basis: 100%; } }
 @media(max-width:800px) { .note-header { align-items: flex-start; }.note-header input { font-size: 28px; }.note-editor-grid { grid-template-columns: 1fr; }.note-editor-grid.layout-split .note-preview { margin-top: 14px; }.note-layout-picker { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }.note-layout-picker button { flex: none; } }

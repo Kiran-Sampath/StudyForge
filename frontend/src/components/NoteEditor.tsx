@@ -10,6 +10,7 @@ import type { ConfidenceLevel, Note, NoteFormat, NoteInput, NoteLink } from '../
 
 type EditorLayout = 'write' | 'split' | 'preview'
 type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
+const codeLanguages = ['plaintext', 'bash', 'c', 'cpp', 'csharp', 'css', 'go', 'html', 'java', 'javascript', 'json', 'markdown', 'python', 'rust', 'sql', 'typescript', 'xml', 'yaml']
 
 function sameInput(left: NoteInput, right: NoteInput) {
   return left.title === right.title && left.content === right.content && left.format === right.format && JSON.stringify(left.links) === JSON.stringify(right.links) && left.key_takeaway === right.key_takeaway && left.revisit_question === right.revisit_question && left.confidence === right.confidence
@@ -74,6 +75,8 @@ export function NoteEditor() {
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [layout, setLayout] = useState<EditorLayout>('split')
+  const [showCodeOptions, setShowCodeOptions] = useState(false)
+  const [codeLanguage, setCodeLanguage] = useState('plaintext')
   const textarea = useRef<HTMLTextAreaElement>(null)
   const draft: NoteInput = { title, content, format, links, key_takeaway: keyTakeaway || null, revisit_question: revisitQuestion || null, confidence }
   const latestDraft = useRef(draft)
@@ -194,6 +197,28 @@ export function NoteEditor() {
     })
   }
 
+  function insertCodeBlock() {
+    const field = textarea.current
+    if (!field) return
+    const start = field.selectionStart
+    const end = field.selectionEnd
+    const selected = content.slice(start, end)
+    const before = content.slice(0, start)
+    const after = content.slice(end)
+    const opening = `\`\`\`${codeLanguage === 'plaintext' ? '' : codeLanguage}\n`
+    const block = `${opening}${selected}\n\`\`\``
+    const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
+    const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : ''
+    const insertion = `${prefix}${block}${suffix}`
+    setContent(before + insertion + after)
+    setShowCodeOptions(false)
+    requestAnimationFrame(() => {
+      field.focus()
+      const codeStart = start + prefix.length + opening.length
+      field.setSelectionRange(codeStart, codeStart + selected.length)
+    })
+  }
+
   function addLink(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLinkError('')
@@ -224,7 +249,8 @@ export function NoteEditor() {
     <div className={`note-editor-grid layout-${layout}`}>
       <section className={`note-write ${layout === 'preview' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown editor' : 'Plain text editor'}>
         <div className="note-pane-title">WRITE <span>{format === 'markdown' ? 'Markdown' : 'Plain text'}</span></div>
-        {format === 'markdown' && <div className="note-toolbar" aria-label="Formatting"><button aria-label="Heading" onClick={() => insert('## ', '', 'Heading')}><Heading2 size={17} /></button><button aria-label="Bold" onClick={() => insert('**')}><Bold size={17} /></button><button aria-label="Italic" onClick={() => insert('*')}><Italic size={17} /></button><button aria-label="List" onClick={() => insert('- ', '', 'Item')}><List size={17} /></button><button aria-label="Link" onClick={() => insert('[', '](https://example.com)', 'link text')}><Link2 size={17} /></button><button aria-label="Code block" onClick={() => insert('```\n', '\n```', 'code')}><Code2 size={17} /></button></div>}
+        {format === 'markdown' && <div className="note-toolbar" aria-label="Formatting"><button aria-label="Heading" onClick={() => insert('## ', '', 'Heading')}><Heading2 size={17} /></button><button aria-label="Bold" onClick={() => insert('**')}><Bold size={17} /></button><button aria-label="Italic" onClick={() => insert('*')}><Italic size={17} /></button><button aria-label="List" onClick={() => insert('- ', '', 'Item')}><List size={17} /></button><button aria-label="Link" onClick={() => insert('[', '](https://example.com)', 'link text')}><Link2 size={17} /></button></div>}
+        <div className="note-code-inserter"><button className="note-code-trigger" type="button" aria-expanded={showCodeOptions} onClick={() => setShowCodeOptions(open => !open)}><Code2 size={16} /> Add code block</button>{showCodeOptions && <div className="note-code-options"><label>Language<select aria-label="Code language" value={codeLanguage} onChange={event => setCodeLanguage(event.target.value)}>{codeLanguages.map(language => <option key={language} value={language}>{language === 'plaintext' ? 'Plain text' : language}</option>)}</select></label><button className="button secondary" type="button" onClick={insertCodeBlock}>Insert block</button></div>}</div>
         <textarea ref={textarea} aria-label="Note content" spellCheck value={content} onChange={event => setContent(event.target.value)} placeholder={format === 'markdown' ? 'Start writing in Markdown…' : 'Start writing your note…'} />
       </section>
       <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>

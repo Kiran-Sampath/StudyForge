@@ -44,6 +44,11 @@ code highlighting, language labels, and a Copy Code action. Add up to 30 links
 to articles, repositories, videos, or other learning material. Links open in a
 new tab and are saved with the note.
 
+Use **Add code block** in either Plain text or Markdown mode to wrap the current
+selection (or insert at the cursor) in a fenced code block and choose a language.
+Plain text keeps the fence characters visible; switching the note to Markdown
+shows syntax highlighting and the copy action.
+
 Notes autosave shortly after editing while retaining the manual Save button and
 Ctrl/Cmd+S shortcut. Saves run serially so an older request cannot overwrite a
 newer draft. The editor warns before leaving while changes remain unsaved. An
