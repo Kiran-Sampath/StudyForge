@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Bold, Code2, Columns2, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Trash2 } from 'lucide-react'
+import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { ArrowLeft, Bold, Check, Code2, Columns2, Copy, ExternalLink, Eye, Heading2, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Trash2 } from 'lucide-react'
 import { Link, useBlocker, useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -13,6 +13,38 @@ type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 
 function sameInput(left: NoteInput, right: NoteInput) {
   return left.title === right.title && left.content === right.content && left.format === right.format && JSON.stringify(left.links) === JSON.stringify(right.links)
+}
+
+function nodeText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(nodeText).join('')
+  if (isValidElement<{ children?: ReactNode }>(node)) return nodeText(node.props.children)
+  return ''
+}
+
+function PreviewCodeBlock({ children, ...props }: ComponentProps<'pre'>) {
+  const [copied, setCopied] = useState(false)
+  const code = Children.toArray(children).find(child => isValidElement(child))
+  const className = isValidElement<{ className?: string }>(code) ? code.props.className ?? '' : ''
+  const language = className.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? 'text'
+  const source = nodeText(code).replace(/\n$/, '')
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(source)
+    } catch {
+      const fallback = document.createElement('textarea')
+      fallback.value = source
+      fallback.style.position = 'fixed'
+      fallback.style.opacity = '0'
+      document.body.appendChild(fallback)
+      fallback.select()
+      document.execCommand('copy')
+      fallback.remove()
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
+  return <div className="preview-code-block"><div className="preview-code-header"><span>{language}</span><button type="button" onClick={copyCode}>{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy code'}</button></div><pre {...props}>{children}</pre></div>
 }
 
 function linkKind(url: string) {
@@ -182,7 +214,7 @@ export function NoteEditor() {
       </section>
       <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>
         <div className="note-pane-title"><Eye size={15} /> PREVIEW</div>
-        <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} skipHtml>{content}</ReactMarkdown> : <div className="note-plain-preview">{content}</div> : <p className="preview-empty">Your preview will appear here as you write.</p>}</div>
+        <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: PreviewCodeBlock }} skipHtml>{content}</ReactMarkdown> : <div className="note-plain-preview">{content}</div> : <p className="preview-empty">Your preview will appear here as you write.</p>}</div>
       </section>
     </div>
     <section className="note-resources" aria-labelledby="resources-heading"><div className="note-resources-heading"><div><h2 id="resources-heading">Learning links</h2><p>Keep articles, repositories, videos, and other material beside your note.</p></div><span>{links.length} / 30</span></div><form className="note-link-form" onSubmit={addLink}><label>Link title <span>optional</span><input value={linkLabel} maxLength={120} onChange={event => setLinkLabel(event.target.value)} placeholder="e.g. Official documentation" /></label><label>URL<input type="url" required value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError('') }} placeholder="https://…" /></label><button className="button secondary" type="submit"><Plus size={16} /> Add link</button></form>{linkError && <p className="request-error" role="alert">{linkError}</p>}{links.length ? <ul className="note-link-list">{links.map((link, index) => <li key={`${link.url}-${index}`}><span className="note-link-icon"><ExternalLink size={18} /></span><div><a href={link.url} target="_blank" rel="noopener noreferrer">{link.label || new URL(link.url).hostname} <ExternalLink size={13} /></a><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></div><button className="icon-button" aria-label={`Remove ${link.label || link.url}`} onClick={() => setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={16} /></button></li>)}</ul> : <p className="note-links-empty">No links yet. Add a URL above to keep it with this note.</p>}</section>
