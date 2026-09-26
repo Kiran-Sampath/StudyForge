@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { CompactMarkdownCodeBlock, MarkdownCodeBlock } from './MarkdownCodeBlock'
-import { findInlineMarkdownImages } from './noteImages'
+import { findInlineMarkdownImages, normalizeInlineMarkdownImages } from './noteImages'
 
 type Segment = { kind: 'text'; value: string } | { kind: 'code'; language: string; value: string }
 
@@ -57,7 +57,7 @@ function splitInlineImages(text: string) {
 }
 
 export function PlainTextPreview({ content, compact = false, renderImage }: { content: string; compact?: boolean; renderImage?: (src: string, alt: string) => ReactNode }) {
-  const segments = parsePlainText(content)
+  const segments = parsePlainText(normalizeInlineMarkdownImages(content))
   return <div className={compact ? 'note-card-preview plain' : 'note-plain-preview'}>{segments.map((segment, index) => segment.kind === 'text'
     ? <div className="plain-text-run" key={`text-${index}`}>{renderImage ? splitInlineImages(segment.value).map((part, partIndex) => 'src' in part ? <span className="plain-inline-image" key={`image-${partIndex}`}>{renderImage(part.src, part.alt)}</span> : <span key={`text-${partIndex}`}>{part.text}</span>) : segment.value}</div>
     : <ReactMarkdown key={`code-${index}`} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: compact ? CompactMarkdownCodeBlock : MarkdownCodeBlock }} skipHtml>{asSafeMarkdownFence(segment.language, segment.value)}</ReactMarkdown>)}</div>

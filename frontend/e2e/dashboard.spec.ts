@@ -194,6 +194,28 @@ test('pasted screenshots render inline in Markdown mode and can be enlarged', as
   await expect(page.getByRole('dialog', { name: 'diagram.png' })).toBeVisible()
 })
 
+test('pasted image preview escapes an unfinished code block at its insertion point', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await showNotes(page)
+  await page.getByRole('radio', { name: 'Plain text' }).check()
+  const editor = page.getByRole('textbox', { name: 'Note content' })
+  await editor.fill('```java\nBefore after')
+  await editor.evaluate((field: HTMLTextAreaElement) => field.setSelectionRange(15, 15))
+  await editor.evaluate((field: HTMLTextAreaElement) => {
+    const clipboard = new DataTransfer()
+    clipboard.items.add(new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'diagram.png', { type: 'image/png' }))
+    field.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: clipboard }))
+  })
+
+  await expect(editor.locator('img')).toHaveAttribute('src', /token=fresh/)
+  const preview = page.getByRole('region', { name: 'Plain text preview' })
+  await expect(preview.locator('.hljs')).toHaveCount(1)
+  await expect(preview.getByRole('button', { name: 'View image: diagram.png' })).toBeVisible()
+  await expect(preview).toContainText('after')
+  await expect(preview).not.toContainText('![diagram.png]')
+})
+
 test('content tabs preserve drafts and Add Content reuses resource flows', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/paths/5/topics/501')
