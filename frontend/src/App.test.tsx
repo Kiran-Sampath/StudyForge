@@ -59,11 +59,11 @@ describe('learning workspace', () => {
 
   it('filters by status, searches, and recovers from no results', async () => {
     const user = await setup()
-    await user.click(screen.getByRole('button', { name: 'Completed' }))
+    await user.click(screen.getByRole('button', { name: /^Completed/ }))
     expect(screen.getAllByRole('article')).toHaveLength(1)
-    expect(screen.getByRole('heading', { name: 'SQL & Databases' })).toBeInTheDocument()
+    expect(within(screen.getByRole('article')).getByRole('heading', { name: 'SQL & Databases' })).toBeInTheDocument()
     await user.type(screen.getByRole('searchbox'), 'something missing')
-    expect(screen.getByText('No paths found here')).toBeInTheDocument()
+    expect(screen.getByText('No learning paths match these filters.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.getAllByRole('article')).toHaveLength(6)
   })
@@ -106,6 +106,25 @@ describe('learning workspace', () => {
     expect(screen.getByLabelText(/Title/)).toHaveValue('Keep my work')
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Create learning path' }))
     expect(await screen.findByRole('heading', { name: 'Keep my work' })).toBeInTheDocument()
+  })
+
+  it('shows recent learning context and continues to the newest note', async () => {
+    await setup()
+    await screen.findByRole('link', { name: /Transaction Isolation Notes/ })
+    const continueLink = screen.getByRole('link', { name: /Continue learning/ })
+    expect(continueLink).toHaveAttribute('href', '/paths/4/topics/401/notes/1')
+    expect(screen.getByRole('heading', { name: 'Recently worked on' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Transaction Isolation Notes/ })).toHaveAttribute('href', '/paths/4/topics/401/notes/1')
+    expect(screen.queryByRole('button', { name: 'Create learning path' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Actions for System Design' })?.closest('article')).toHaveAttribute('tabindex', '0')
+  })
+
+  it('opens a learning path from the focused card while preserving separate menu actions', async () => {
+    const user = await setup()
+    const card = screen.getByRole('heading', { name: 'System Design' }).closest('article')!
+    card.focus()
+    await user.keyboard('{Enter}')
+    expect(await screen.findByRole('heading', { level: 1, name: 'System Design' })).toBeInTheDocument()
   })
 
   it('adds, edits, completes, and deletes a topic with progress updates', async () => {

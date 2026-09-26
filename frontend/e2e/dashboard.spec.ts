@@ -413,7 +413,7 @@ test('plain-text note cards render fenced code as a compact syntax-highlighted p
 test('demo workspace seeds paths, topic progress, notes, links, and private sample images', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Add sample data' }).click()
-  await expect(page.getByRole('button', { name: 'Sample workspace added' })).toBeVisible({ timeout: 30000 })
+  await expect(page.getByText('Sample workspace added to your learning paths.')).toBeVisible({ timeout: 30000 })
   await expect(page.getByRole('heading', { name: 'Your learning paths' })).toContainText('9')
 
   await page.getByRole('link', { name: 'Demo · Python for Data Analysis', exact: true }).last().click()

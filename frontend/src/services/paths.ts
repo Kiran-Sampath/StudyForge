@@ -35,7 +35,7 @@ export function toLearningPath(data: LearningPathResponse): LearningPath {
     icon: 'layers', color: colors[(data.id - 1) % colors.length],
     topicCount: data.topic_count, completedTopicCount: data.completed_topic_count,
     inProgressTopicCount: data.in_progress_topic_count, completionPercentage: data.completion_percentage,
-    createdAt: new Date(data.created_at).getTime() }
+    createdAt: new Date(data.created_at).getTime(), updatedAt: new Date(data.updated_at).getTime() }
 }
 
 export async function listPaths(signal?: AbortSignal): Promise<LearningPath[]> {

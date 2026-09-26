@@ -48,6 +48,7 @@ export interface LearningPath {
   inProgressTopicCount: number
   completionPercentage: number
   createdAt: number
+  updatedAt: number
 }
 
 export type PathInput = Pick<LearningPath, 'title' | 'description'>

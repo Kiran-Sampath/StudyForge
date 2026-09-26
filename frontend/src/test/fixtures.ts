@@ -31,9 +31,9 @@ export function mockPathApi() {
   } as Topic)))
   let nextId = 100
   let nextTopicId = 1000
-  let notes: Note[] = []
+  let notes: Note[] = [{ id: 1, topic_id: 401, title: 'Transaction Isolation Notes', content: 'Read committed notes', format: 'markdown', links: [], key_takeaway: null, revisit_question: null, confidence: null, created_at: '2026-09-25T10:00:00Z', updated_at: '2026-09-25T10:00:00Z' }]
   let noteImages: import('../types').NoteImage[] = []
-  let nextNoteId = 1
+  let nextNoteId = 2
   function updateSummary(pathId: number) {
     const path = records.find(record => record.id === pathId)
     if (!path) return
