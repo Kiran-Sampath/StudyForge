@@ -63,7 +63,7 @@ export function mockPathApi() {
       if (segments[4] === 'images') {
         if (method === 'GET') return { status: 200, body: noteImages.filter(image => image.note_id === id) }
         if (method === 'POST') {
-          const uploaded: import('../types').NoteImage = { id: noteImages.length + 1, note_id: id, filename: 'diagram.png', content_type: 'image/png', size_bytes: 12, alt_text: null, url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pJcAAAAASUVORK5CYII=' }
+          const uploaded: import('../types').NoteImage = { id: noteImages.length + 1, note_id: id, filename: 'diagram.png', content_type: 'image/png', size_bytes: 12, alt_text: null, url: 'https://studyforge.supabase.co/storage/v1/object/sign/studyforge-note-images/demo/1/diagram.png?token=fresh' }
           noteImages.push(uploaded)
           return { status: 201, body: uploaded }
         }
