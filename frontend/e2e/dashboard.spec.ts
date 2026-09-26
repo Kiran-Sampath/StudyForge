@@ -409,3 +409,26 @@ test('plain-text note cards render fenced code as a compact syntax-highlighted p
   await expect(card.locator('.note-card-preview .hljs')).not.toHaveCount(0)
   await expect(card.locator('.note-card-preview')).not.toContainText('```')
 })
+
+test('demo workspace seeds paths, topic progress, notes, links, and private sample images', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add sample data' }).click()
+  await expect(page.getByRole('button', { name: 'Sample workspace added' })).toBeVisible({ timeout: 30000 })
+  await expect(page.getByRole('heading', { name: 'Your learning paths' })).toContainText('9')
+
+  await page.getByRole('link', { name: 'Demo · Python for Data Analysis', exact: true }).last().click()
+  await page.getByRole('link', { name: 'Load and inspect datasets' }).click()
+  await page.getByRole('link', { name: /A reliable data workflow/ }).click()
+  await expect(page.locator('.note-all-content img')).toHaveAttribute('src', /token=fresh/)
+  await page.getByRole('tab', { name: 'Resources' }).click()
+  await expect(page.getByRole('button', { name: /Images 0/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Links 2/ })).toBeVisible()
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Demo · Relational Database Design', exact: true }).last().click()
+  await page.getByRole('link', { name: 'Indexes and query plans' }).click()
+  await page.getByRole('link', { name: /Indexes narrow the search/ }).click()
+  await page.getByRole('tab', { name: 'Resources' }).click()
+  await expect(page.getByRole('button', { name: /Images 1/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'View image: btree-index.png' })).toBeVisible()
+})

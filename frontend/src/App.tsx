@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sprout, X } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, ChevronRight, Compass, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Sparkles, Sprout, X } from 'lucide-react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
 import { PathCard } from './components/PathCard'
 import { PathDialog, type EditorState } from './components/PathDialog'
@@ -9,6 +9,7 @@ import { NoteEditor } from './components/NoteEditor'
 import { AuthPage } from './components/AuthPage'
 import { useAuth } from './auth/AuthProvider'
 import * as pathsApi from './services/paths'
+import { demoPathTitles, seedDemoWorkspace } from './services/demoData'
 import { pathProgress, pathStatus, type LearningPath, type PathInput } from './types'
 
 type Filter = 'all' | 'active' | 'completed' | 'not-started'
@@ -23,6 +24,9 @@ export default function App() {
   const [loadError, setLoadError] = useState('')
   const [reload, setReload] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [demoBusy, setDemoBusy] = useState(false)
+  const [demoProgress, setDemoProgress] = useState('')
+  const [demoError, setDemoError] = useState('')
   const [mutationError, setMutationError] = useState('')
   useEffect(() => {
     if (authLoading) return
@@ -82,6 +86,19 @@ export default function App() {
       setPaths(previous => previous.map(path => path.id === id ? updated : path))
     }).catch(() => setToast('Topic saved. Refresh to update the path progress.'))
   }
+  async function addDemoData() {
+    if (demoBusy) return
+    setDemoBusy(true)
+    setDemoError('')
+    try {
+      await seedDemoWorkspace(setDemoProgress)
+      setPaths(await pathsApi.listPaths())
+      setToast('Sample workspace added to your learning paths.')
+    } catch (error) {
+      setDemoError(error instanceof Error ? error.message : 'Could not finish adding sample data.')
+    } finally { setDemoBusy(false) }
+  }
+  const demoLoaded = demoPathTitles.every(title => paths.some(path => path.title === title))
   function sidebar() {
     return <><div className="sidebar-brand"><Brand /></div><div className="workspace-label">PERSONAL WORKSPACE</div>
       <nav aria-label="Main navigation"><NavLink to="/" end className="nav-item"><LayoutGrid size={18} /><span>Learning paths</span><span className="nav-count">{paths.length}</span></NavLink></nav>
@@ -95,7 +112,7 @@ export default function App() {
     <div className="main-shell">
       <header className="topbar"><div className="topbar-left"><button className="icon-button desktop-collapse" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><span className="topbar-breadcrumb">Workspace <ChevronRight size={13} /> <span>Learning paths</span></span></div><div className="topbar-account"><span className="local-badge"><span /> {user?.email}</span><button className="icon-button" aria-label="Sign out" title="Sign out" onClick={() => void signOut()}><LogOut size={16} /></button></div></header>
       <main id="main-content" tabIndex={-1}>
-        {loading ? <div className="page loading-state" role="status" aria-live="polite"><p>Loading your learning pathsâ€¦</p><div className="path-grid" aria-hidden="true">{[1, 2, 3].map(id => <div className="skeleton-card" key={id} />)}</div></div> : loadError ? <div className="page empty-state"><h1>Let's reconnect your workspace.</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <Routes><Route path="/" element={<Dashboard paths={paths} onCreate={() => setEditor({ mode: 'create' })} onEdit={edit} onDelete={remove} />} /><Route path="/paths/:pathId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId/notes/:noteId" element={<NoteEditor />} /><Route path="*" element={<NotFound />} /></Routes>}
+        {loading ? <div className="page loading-state" role="status" aria-live="polite"><p>Loading your learning pathsâ€¦</p><div className="path-grid" aria-hidden="true">{[1, 2, 3].map(id => <div className="skeleton-card" key={id} />)}</div></div> : loadError ? <div className="page empty-state"><h1>Let's reconnect your workspace.</h1><p role="alert">{loadError}</p><button className="button primary" onClick={() => setReload(value => value + 1)}>Try again</button></div> : <Routes><Route path="/" element={<Dashboard paths={paths} onCreate={() => setEditor({ mode: 'create' })} onEdit={edit} onDelete={remove} onAddDemo={addDemoData} demoBusy={demoBusy} demoProgress={demoProgress} demoError={demoError} demoLoaded={demoLoaded} />} /><Route path="/paths/:pathId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId" element={<PathPage paths={paths} onEdit={edit} onDelete={remove} onPathChanged={refreshPath} onNotify={setToast} />} /><Route path="/paths/:pathId/topics/:topicId/notes/:noteId" element={<NoteEditor />} /><Route path="*" element={<NotFound />} /></Routes>}
       </main>
       <footer className="page-footer"><span>Thoughtful learning. Lasting understanding.</span><span>StudyForge <span className="footer-dot">Â·</span> Your learning, connected.</span></footer>
     </div>
@@ -105,7 +122,7 @@ export default function App() {
   </div>
 }
 
-function Dashboard({ paths, onCreate, onEdit, onDelete }: { paths: LearningPath[]; onCreate: () => void; onEdit: (path: LearningPath) => void; onDelete: (path: LearningPath) => void }) {
+function Dashboard({ paths, onCreate, onEdit, onDelete, onAddDemo, demoBusy, demoProgress, demoError, demoLoaded }: { paths: LearningPath[]; onCreate: () => void; onEdit: (path: LearningPath) => void; onDelete: (path: LearningPath) => void; onAddDemo: () => void; demoBusy: boolean; demoProgress: string; demoError: string; demoLoaded: boolean }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState('newest')
@@ -115,7 +132,9 @@ function Dashboard({ paths, onCreate, onEdit, onDelete }: { paths: LearningPath[
   const featured = paths.find(path => pathStatus(path) === 'active')
   const visible = useMemo(() => paths.filter(path => (filter === 'all' || pathStatus(path) === filter) && `${path.title} ${path.description}`.toLowerCase().includes(query.toLowerCase().trim())).sort((a, b) => sort === 'name' ? a.title.localeCompare(b.title) : sort === 'progress' ? pathProgress(b).percent - pathProgress(a).percent : b.createdAt - a.createdAt), [paths, filter, query, sort])
   return <div className="page dashboard">
-    <div className="page-heading"><div><div className="eyebrow"><span /> YOUR LEARNING, INTENTIONALLY.</div><h1>A little more understanding.</h1><p>Make space for curiosity. Build knowledge that stays with you.</p></div><button className="button primary" data-primary-action onClick={onCreate}><Plus size={18} /> New learning path</button></div>
+    <div className="page-heading"><div><div className="eyebrow"><span /> YOUR LEARNING, INTENTIONALLY.</div><h1>A little more understanding.</h1><p>Make space for curiosity. Build knowledge that stays with you.</p></div><div className="dashboard-actions"><button className="button secondary" onClick={onAddDemo} disabled={demoBusy || demoLoaded}><Sparkles size={17} />{demoBusy ? 'Adding sample data…' : demoLoaded ? 'Sample workspace added' : 'Add sample data'}</button><button className="button primary" data-primary-action onClick={onCreate}><Plus size={18} /> New learning path</button></div></div>
+    {demoBusy && <p className="demo-progress" role="status">{demoProgress || 'Preparing your sample workspace…'}</p>}
+    {demoError && <p className="request-error" role="alert">{demoError} Sample data can be retried safely.</p>}
     <div className="overview-grid"><section className="overview-card" aria-label="Learning overview"><div className="overview-title"><span className="eyebrow">THE BIG PICTURE</span><Compass size={18} strokeWidth={1.5} /></div><div className="stats"><div><strong>{paths.length.toString().padStart(2, '0')}</strong><span>Learning paths</span></div><div><strong>{active.toString().padStart(2, '0')}</strong><span>In progress</span></div><div><strong>{completed.toString().padStart(2, '0')}<small> / {total}</small></strong><span>Topics completed</span></div></div><div className="overview-foot"><span className="tiny-line" /><span>One concept at a time. It all adds up.</span></div></section>
       <section className="continue-card"><div className="continue-copy"><span className="eyebrow">{featured ? 'KEEP YOUR MOMENTUM' : 'ROOM TO GROW'}</span><h2>{featured ? featured.title : 'Your next chapter starts here.'}</h2><p>{featured ? `Your progress: ${featured.completedTopicCount} of ${featured.topicCount} topics completed` : 'Choose a subject and give your curiosity a direction.'}</p>{featured ? <Link to={`/paths/${featured.id}`} className="continue-link">Continue learning <ArrowRight size={16} /></Link> : <button className="continue-link" onClick={onCreate}>Create a learning path <ArrowRight size={16} /></button>}</div><div className="book-art" aria-hidden="true"><div className="book book-back" /><div className="book book-mid" /><div className="book book-front"><span className="book-line" /><span className="book-line short" /><Bookmark size={19} strokeWidth={1.2} /><span className="book-label">A WORK<br />IN PROGRESS</span></div></div></section>
     </div>
