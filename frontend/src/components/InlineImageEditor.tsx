@@ -1,17 +1,17 @@
 import { useEffect, type RefObject, useRef } from 'react'
 import type { NoteImage } from '../types'
+import { findInlineMarkdownImages } from './noteImages'
 
 type Part = { text: string } | { markdown: string; src: string; alt: string }
-const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g
 
 function parseParts(markdown: string): Part[] {
   const parts: Part[] = []
   let cursor = 0
-  for (const match of markdown.matchAll(imagePattern)) {
-    const at = match.index ?? 0
+  for (const match of findInlineMarkdownImages(markdown)) {
+    const at = match.index
     if (at > cursor) parts.push({ text: markdown.slice(cursor, at) })
-    parts.push({ markdown: match[0], alt: match[1], src: match[2] })
-    cursor = at + match[0].length
+    parts.push({ markdown: match.raw, alt: match.alt, src: match.src })
+    cursor = at + match.raw.length
   }
   if (cursor < markdown.length || parts.length === 0) parts.push({ text: markdown.slice(cursor) })
   return parts
@@ -124,7 +124,9 @@ export function InlineImageEditor({ value, onChange, onPasteImage, onViewImage, 
 
   return <div ref={editorRef} role="textbox" aria-label="Note content" aria-multiline="true" contentEditable={!readOnly} suppressContentEditableWarning className="note-rich-editor" data-placeholder="Write your note…" onInput={event => {
     const next = serialize(event.currentTarget)
-    emittedValue.current = next
+    const sourceImages = findInlineMarkdownImages(next).length
+    const renderedImages = event.currentTarget.querySelectorAll('button[data-markdown]').length
+    emittedValue.current = sourceImages === renderedImages ? next : null
     onChange(next)
   }} onKeyDown={event => {
     if (event.key === 'Enter') {

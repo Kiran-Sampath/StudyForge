@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
 import { CompactMarkdownCodeBlock, MarkdownCodeBlock } from './MarkdownCodeBlock'
+import { findInlineMarkdownImages } from './noteImages'
 
 type Segment = { kind: 'text'; value: string } | { kind: 'code'; language: string; value: string }
 
@@ -45,13 +46,11 @@ function asSafeMarkdownFence(language: string, code: string) {
 
 function splitInlineImages(text: string) {
   const parts: Array<{ text: string } | { alt: string; src: string }> = []
-  const imageSyntax = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g
   let cursor = 0
-  for (const match of text.matchAll(imageSyntax)) {
-    const index = match.index ?? 0
-    if (index > cursor) parts.push({ text: text.slice(cursor, index) })
-    parts.push({ alt: match[1], src: match[2] })
-    cursor = index + match[0].length
+  for (const match of findInlineMarkdownImages(text)) {
+    if (match.index > cursor) parts.push({ text: text.slice(cursor, match.index) })
+    parts.push({ alt: match.alt, src: match.src })
+    cursor = match.index + match.raw.length
   }
   if (cursor < text.length || parts.length === 0) parts.push({ text: text.slice(cursor) })
   return parts
