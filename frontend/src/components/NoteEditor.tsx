@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import 'highlight.js/styles/github.css'
 import { MarkdownCodeBlock } from './MarkdownCodeBlock'
 import { PlainTextPreview } from './PlainTextPreview'
+import { editorSourceOffset, editorSourceSelection, focusEditorAtSourceOffset, InlineImageEditor } from './InlineImageEditor'
 import * as api from '../services/notes'
 import type { ConfidenceLevel, Note, NoteFormat, NoteImage, NoteInput, NoteLink } from '../types'
 
@@ -83,12 +84,14 @@ export function NoteEditor() {
   const [showCodeOptions, setShowCodeOptions] = useState(false)
   const [codeLanguage, setCodeLanguage] = useState('plaintext')
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const inlineEditor = useRef<HTMLDivElement>(null)
   const imageInput = useRef<HTMLInputElement>(null)
   const linkLabelInput = useRef<HTMLInputElement>(null)
   const contentMenu = useRef<HTMLDivElement>(null)
   const viewerTrigger = useRef<HTMLElement | null>(null)
   const viewerCloseButton = useRef<HTMLButtonElement>(null)
   const inlineUploadingRef = useRef(false)
+  const pendingInlineCaret = useRef<number | null>(null)
   const draft: NoteInput = { title, content, format, links, key_takeaway: keyTakeaway || null, revisit_question: revisitQuestion || null, confidence }
   const latestDraft = useRef(draft)
   const savedDraft = useRef(saved)
@@ -99,6 +102,13 @@ export function NoteEditor() {
   const dirty = Boolean(note) && !sameInput(draft, saved)
   const blocker = useBlocker(dirty || inlineImageUploading)
   const galleryImages = images.filter(image => !markdownHasImage(content, image.url))
+  const hasInlineImages = /!\[[^\]]*\]\(https?:\/\/[^\s)]+\)/.test(content)
+
+  useEffect(() => {
+    if (!hasInlineImages || pendingInlineCaret.current === null || !inlineEditor.current) return
+    focusEditorAtSourceOffset(inlineEditor.current, pendingInlineCaret.current)
+    pendingInlineCaret.current = null
+  }, [content, hasInlineImages])
 
   useEffect(() => {
     if (!pendingFocus) return
@@ -236,24 +246,40 @@ export function NoteEditor() {
     return () => window.removeEventListener('keydown', shortcut)
   }, [save])
 
-  function insert(before: string, after = before, placeholder = 'text') {
+  function selectionOffsets(): [number, number] {
     const field = textarea.current
-    if (!field) return
-    const start = field.selectionStart
-    const end = field.selectionEnd
+    if (field) return [field.selectionStart, field.selectionEnd]
+    if (inlineEditor.current) return editorSourceSelection(inlineEditor.current)
+    return [content.length, content.length]
+  }
+
+  function restoreEditorSelection(start: number, end: number) {
+    if (hasInlineImages) {
+      pendingInlineCaret.current = end
+      requestAnimationFrame(() => {
+        if (inlineEditor.current && pendingInlineCaret.current !== null) {
+          focusEditorAtSourceOffset(inlineEditor.current, pendingInlineCaret.current)
+          pendingInlineCaret.current = null
+        }
+      })
+      return
+    }
+    requestAnimationFrame(() => {
+      textarea.current?.focus()
+      textarea.current?.setSelectionRange(start, end)
+    })
+  }
+
+  function insert(before: string, after = before, placeholder = 'text') {
+    const [start, end] = selectionOffsets()
     const selected = content.slice(start, end) || placeholder
     setContent(content.slice(0, start) + before + selected + after + content.slice(end))
-    requestAnimationFrame(() => {
-      field.focus()
-      field.setSelectionRange(start + before.length, start + before.length + selected.length)
-    })
+    restoreEditorSelection(start + before.length, start + before.length + selected.length)
   }
 
   function insertCodeBlock() {
     const field = textarea.current
-    if (!field) return
-    const start = field.selectionStart
-    const end = field.selectionEnd
+    const [start, end] = selectionOffsets()
     const selected = content.slice(start, end)
     const before = content.slice(0, start)
     const after = content.slice(end)
@@ -264,11 +290,8 @@ export function NoteEditor() {
     const insertion = `${prefix}${block}${suffix}`
     setContent(before + insertion + after)
     setShowCodeOptions(false)
-    requestAnimationFrame(() => {
-      field.focus()
-      const codeStart = start + prefix.length + opening.length
-      field.setSelectionRange(codeStart, codeStart + selected.length)
-    })
+    const codeStart = start + prefix.length + opening.length
+    restoreEditorSelection(codeStart, codeStart + selected.length)
   }
 
   function addLink(event: React.FormEvent<HTMLFormElement>) {
@@ -307,12 +330,8 @@ export function NoteEditor() {
     } finally { setImageBusy(false) }
   }
 
-  async function pasteImages(event: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const clipboardFiles = Array.from(event.clipboardData.items)
-      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
-      .map(item => item.getAsFile()).filter((file): file is File => file !== null)
+  async function uploadPastedImages(clipboardFiles: File[], selectionOffset: number, selectionEnd = selectionOffset) {
     if (!clipboardFiles.length) return
-    event.preventDefault()
     if (!note) return
     if (imageBusy || inlineUploadingRef.current) {
       setImageError('Wait for the current image upload to finish before pasting another image.')
@@ -325,10 +344,7 @@ export function NoteEditor() {
     if (files.length < supported.length) warning = 'A note can have up to 10 images.'
     if (!files.length) { setImageError(warning || 'A note can have up to 10 images.'); return }
 
-    const field = event.currentTarget
-    const selectionStart = field.selectionStart
-    const selectionEnd = field.selectionEnd
-    const before = content.slice(0, selectionStart)
+    const before = content.slice(0, selectionOffset)
     const after = content.slice(selectionEnd)
     const uploaded: NoteImage[] = []
     let failure = ''
@@ -346,20 +362,36 @@ export function NoteEditor() {
     } finally {
       if (uploaded.length) {
         const markdown = uploaded.map(image => `![${image.filename.replace(/[\]\\]/g, '\\$&')}](${image.url})`).join('\n\n')
-        const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
-        const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : ''
-        const inserted = `${prefix}${markdown}${suffix}`
-        setContent(before + inserted + after)
-        const caret = before.length + inserted.length
+        const inserted = markdown
+        const separatorBefore = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
+        const separatorAfter = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : ''
+        const addition = `${separatorBefore}${inserted}${separatorAfter}`
+        pendingInlineCaret.current = before.length + addition.length
+        setContent(before + addition + after)
         requestAnimationFrame(() => {
-          textarea.current?.focus()
-          textarea.current?.setSelectionRange(caret, caret)
+          if (!inlineEditor.current) {
+            textarea.current?.focus()
+            textarea.current?.setSelectionRange(pendingInlineCaret.current ?? 0, pendingInlineCaret.current ?? 0)
+            pendingInlineCaret.current = null
+          }
         })
       }
       setImageError(failure || warning)
       inlineUploadingRef.current = false
       setInlineImageUploading(false)
     }
+  }
+
+  function pasteImages(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const files = Array.from(event.clipboardData.items)
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile()).filter((file): file is File => file !== null)
+    if (!files.length) return
+    event.preventDefault()
+    const field = event.currentTarget
+    const start = field.selectionStart
+    const end = field.selectionEnd
+    void uploadPastedImages(files, start, end)
   }
 
   async function removeImage(image: NoteImage) {
@@ -431,7 +463,10 @@ export function NoteEditor() {
           <div className="note-pane-title">WRITE <span>{format === 'markdown' ? 'Markdown' : 'Plain text'}</span></div>
           {format === 'markdown' && <div className="note-toolbar" aria-label="Formatting"><button aria-label="Heading" onClick={() => insert('## ', '', 'Heading')}><Heading2 size={17} /></button><button aria-label="Bold" onClick={() => insert('**')}><Bold size={17} /></button><button aria-label="Italic" onClick={() => insert('*')}><Italic size={17} /></button><button aria-label="List" onClick={() => insert('- ', '', 'Item')}><List size={17} /></button><button aria-label="Link" onClick={() => insert('[', '](https://example.com)', 'link text')}><Link2 size={17} /></button></div>}
           <div className="note-code-inserter"><span className="note-paste-hint">Paste a screenshot to insert it here</span><button className="note-code-trigger" type="button" aria-expanded={showCodeOptions} onClick={() => setShowCodeOptions(open => !open)}><Code2 size={16} /> Add code block</button>{showCodeOptions && <div className="note-code-options"><label>Language<select aria-label="Code language" value={codeLanguage} onChange={event => setCodeLanguage(event.target.value)}>{codeLanguages.map(language => <option key={language} value={language}>{language === 'plaintext' ? 'Plain text' : language}</option>)}</select></label><button className="button secondary" type="button" onClick={insertCodeBlock}>Insert block</button></div>}</div>
-          <textarea ref={textarea} aria-label="Note content" spellCheck value={content} readOnly={inlineImageUploading} onPaste={event => void pasteImages(event)} onChange={event => setContent(event.target.value)} placeholder={format === 'markdown' ? 'Start writing in Markdown…' : 'Start writing your note…'} />
+          {hasInlineImages ? <InlineImageEditor editorRef={inlineEditor} images={images} value={content} readOnly={inlineImageUploading} onChange={setContent} onPasteImage={(files, start, end) => void uploadPastedImages(files, start, end)} onViewImage={(src, alt, button) => {
+            const uploaded = matchingUploadedImage(src, images)
+            openImageViewer({ url: uploaded?.url ?? src, filename: uploaded?.filename ?? (alt || 'note-image'), altText: alt || uploaded?.alt_text || '' }, button)
+          }} /> : <textarea ref={textarea} aria-label="Note content" spellCheck value={content} readOnly={inlineImageUploading} onPaste={event => pasteImages(event)} onChange={event => setContent(event.target.value)} placeholder={format === 'markdown' ? 'Start writing in Markdown…' : 'Start writing your note…'} />}
           {inlineImageUploading && <p className="note-inline-upload-status" role="status">Uploading pasted image to private storage…</p>}
           {imageError && <p className="request-error" role="alert">{imageError}</p>}
         </section>
