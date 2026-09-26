@@ -65,6 +65,7 @@ export function NoteEditor() {
   const [images, setImages] = useState<NoteImage[]>([])
   const [imageAltText, setImageAltText] = useState('')
   const [imageBusy, setImageBusy] = useState(false)
+  const [inlineImageUploading, setInlineImageUploading] = useState(false)
   const [imageError, setImageError] = useState('')
   const [activeTab, setActiveTab] = useState<NoteTab>('all')
   const [resourceFilter, setResourceFilter] = useState<ResourceFilter>('all')
@@ -87,6 +88,7 @@ export function NoteEditor() {
   const contentMenu = useRef<HTMLDivElement>(null)
   const viewerTrigger = useRef<HTMLElement | null>(null)
   const viewerCloseButton = useRef<HTMLButtonElement>(null)
+  const inlineUploadingRef = useRef(false)
   const draft: NoteInput = { title, content, format, links, key_takeaway: keyTakeaway || null, revisit_question: revisitQuestion || null, confidence }
   const latestDraft = useRef(draft)
   const savedDraft = useRef(saved)
@@ -95,7 +97,7 @@ export function NoteEditor() {
   latestDraft.current = draft
   savedDraft.current = saved
   const dirty = Boolean(note) && !sameInput(draft, saved)
-  const blocker = useBlocker(dirty)
+  const blocker = useBlocker(dirty || inlineImageUploading)
   const galleryImages = images.filter(image => !markdownHasImage(content, image.url))
 
   useEffect(() => {
@@ -166,11 +168,11 @@ export function NoteEditor() {
   }, [noteId, topicId])
 
   useEffect(() => {
-    if (!dirty) return
+    if (!dirty && !inlineImageUploading) return
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
     window.addEventListener('beforeunload', guard)
     return () => window.removeEventListener('beforeunload', guard)
-  }, [dirty])
+  }, [dirty, inlineImageUploading])
 
   const save = useCallback(async () => {
     if (!note) return
@@ -305,6 +307,61 @@ export function NoteEditor() {
     } finally { setImageBusy(false) }
   }
 
+  async function pasteImages(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const clipboardFiles = Array.from(event.clipboardData.items)
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile()).filter((file): file is File => file !== null)
+    if (!clipboardFiles.length) return
+    event.preventDefault()
+    if (!note) return
+    if (imageBusy || inlineUploadingRef.current) {
+      setImageError('Wait for the current image upload to finish before pasting another image.')
+      return
+    }
+    const supported = clipboardFiles.filter(file => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
+    let warning = supported.length < clipboardFiles.length ? 'Pasted images must be JPEG, PNG, or WebP.' : ''
+    const available = Math.max(0, 10 - images.length)
+    const files = supported.slice(0, available)
+    if (files.length < supported.length) warning = 'A note can have up to 10 images.'
+    if (!files.length) { setImageError(warning || 'A note can have up to 10 images.'); return }
+
+    const field = event.currentTarget
+    const selectionStart = field.selectionStart
+    const selectionEnd = field.selectionEnd
+    const before = content.slice(0, selectionStart)
+    const after = content.slice(selectionEnd)
+    const uploaded: NoteImage[] = []
+    let failure = ''
+    inlineUploadingRef.current = true
+    setInlineImageUploading(true)
+    setImageError(warning)
+    try {
+      for (const file of files) {
+        const result = await api.uploadNoteImage(note.id, file, file.name || 'Pasted screenshot')
+        uploaded.push(result)
+        setImages(current => [...current, result])
+      }
+    } catch (reason) {
+      failure = reason instanceof Error ? reason.message : 'Could not upload pasted image.'
+    } finally {
+      if (uploaded.length) {
+        const markdown = uploaded.map(image => `![${image.filename.replace(/[\]\\]/g, '\\$&')}](${image.url})`).join('\n\n')
+        const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : ''
+        const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : ''
+        const inserted = `${prefix}${markdown}${suffix}`
+        setContent(before + inserted + after)
+        const caret = before.length + inserted.length
+        requestAnimationFrame(() => {
+          textarea.current?.focus()
+          textarea.current?.setSelectionRange(caret, caret)
+        })
+      }
+      setImageError(failure || warning)
+      inlineUploadingRef.current = false
+      setInlineImageUploading(false)
+    }
+  }
+
   async function removeImage(image: NoteImage) {
     if (!note) return
     setImageBusy(true)
@@ -358,7 +415,7 @@ export function NoteEditor() {
     <div className="note-header"><input aria-label="Note title" maxLength={200} value={title} onChange={event => setTitle(event.target.value)} /><div className="note-header-actions"><div className="add-content-menu" ref={contentMenu}><button className="button secondary" type="button" aria-haspopup="menu" aria-expanded={addMenuOpen} onClick={() => setAddMenuOpen(open => !open)}><Plus size={16} /> Add Content <ChevronDown size={15} /></button>{addMenuOpen && <div className="add-content-options" role="menu"><button type="button" role="menuitem" onClick={() => openContentAction('text')}><FileText size={16} /> Write Text</button><button type="button" role="menuitem" onClick={() => openContentAction('image')}><ImagePlus size={16} /> Upload Image</button><button type="button" role="menuitem" onClick={() => openContentAction('link')}><Link2 size={16} /> Add Link</button></div>}</div><button className="button primary" disabled={!dirty || saving} onClick={save}><Save size={16} /> Save note</button></div></div>
     {error && <p className="request-error" role="alert">{error}</p>}
     <div className="note-primary-tabs" role="tablist" aria-label="Note content sections">
-      {([['all', 'All'], ['notes', 'Notes'], ['resources', 'Resources']] as const).map(([tab, label]) => <button key={tab} id={`note-tab-${tab}`} role="tab" aria-selected={activeTab === tab} aria-controls={`note-panel-${tab}`} tabIndex={activeTab === tab ? 0 : -1} onClick={() => setActiveTab(tab)}>{label}{tab === 'resources' && <span>{images.length + links.length}</span>}</button>)}
+      {([['all', 'All'], ['notes', 'Notes'], ['resources', 'Resources']] as const).map(([tab, label]) => <button key={tab} id={`note-tab-${tab}`} role="tab" aria-selected={activeTab === tab} aria-controls={`note-panel-${tab}`} tabIndex={activeTab === tab ? 0 : -1} disabled={inlineImageUploading} onClick={() => setActiveTab(tab)}>{label}{tab === 'resources' && <span>{images.length + links.length}</span>}</button>)}
     </div>
     <section id="note-panel-all" className="note-tab-panel note-all-panel" role="tabpanel" aria-labelledby="note-tab-all" hidden={activeTab !== 'all'}>
       <div className="note-all-toolbar"><span><BookOpen size={16} /> Note overview</span><button className="button secondary" type="button" onClick={() => { setActiveTab('notes'); setPendingFocus('editor') }}>Edit Note</button></div>
@@ -373,12 +430,14 @@ export function NoteEditor() {
         <section className={`note-write ${layout === 'preview' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown editor' : 'Plain text editor'}>
           <div className="note-pane-title">WRITE <span>{format === 'markdown' ? 'Markdown' : 'Plain text'}</span></div>
           {format === 'markdown' && <div className="note-toolbar" aria-label="Formatting"><button aria-label="Heading" onClick={() => insert('## ', '', 'Heading')}><Heading2 size={17} /></button><button aria-label="Bold" onClick={() => insert('**')}><Bold size={17} /></button><button aria-label="Italic" onClick={() => insert('*')}><Italic size={17} /></button><button aria-label="List" onClick={() => insert('- ', '', 'Item')}><List size={17} /></button><button aria-label="Link" onClick={() => insert('[', '](https://example.com)', 'link text')}><Link2 size={17} /></button></div>}
-          <div className="note-code-inserter"><button className="note-code-trigger" type="button" aria-expanded={showCodeOptions} onClick={() => setShowCodeOptions(open => !open)}><Code2 size={16} /> Add code block</button>{showCodeOptions && <div className="note-code-options"><label>Language<select aria-label="Code language" value={codeLanguage} onChange={event => setCodeLanguage(event.target.value)}>{codeLanguages.map(language => <option key={language} value={language}>{language === 'plaintext' ? 'Plain text' : language}</option>)}</select></label><button className="button secondary" type="button" onClick={insertCodeBlock}>Insert block</button></div>}</div>
-          <textarea ref={textarea} aria-label="Note content" spellCheck value={content} onChange={event => setContent(event.target.value)} placeholder={format === 'markdown' ? 'Start writing in Markdown…' : 'Start writing your note…'} />
+          <div className="note-code-inserter"><span className="note-paste-hint">Paste a screenshot to insert it here</span><button className="note-code-trigger" type="button" aria-expanded={showCodeOptions} onClick={() => setShowCodeOptions(open => !open)}><Code2 size={16} /> Add code block</button>{showCodeOptions && <div className="note-code-options"><label>Language<select aria-label="Code language" value={codeLanguage} onChange={event => setCodeLanguage(event.target.value)}>{codeLanguages.map(language => <option key={language} value={language}>{language === 'plaintext' ? 'Plain text' : language}</option>)}</select></label><button className="button secondary" type="button" onClick={insertCodeBlock}>Insert block</button></div>}</div>
+          <textarea ref={textarea} aria-label="Note content" spellCheck value={content} readOnly={inlineImageUploading} onPaste={event => void pasteImages(event)} onChange={event => setContent(event.target.value)} placeholder={format === 'markdown' ? 'Start writing in Markdown…' : 'Start writing your note…'} />
+          {inlineImageUploading && <p className="note-inline-upload-status" role="status">Uploading pasted image to private storage…</p>}
+          {imageError && <p className="request-error" role="alert">{imageError}</p>}
         </section>
         <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>
           <div className="note-pane-title"><Eye size={15} /> PREVIEW</div>
-          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
+          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} renderImage={renderMarkdownImage} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
             {galleryImages.length > 0 && <div className="note-image-preview" aria-label="Attached note images">{galleryImages.map(image => <figure key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.alt_text || image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
           </div>
         </section>

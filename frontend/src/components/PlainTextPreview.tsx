@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import remarkGfm from 'remark-gfm'
@@ -42,9 +43,23 @@ function asSafeMarkdownFence(language: string, code: string) {
   return `${fence}${language === 'text' ? '' : language}\n${code}\n${fence}`
 }
 
-export function PlainTextPreview({ content, compact = false }: { content: string; compact?: boolean }) {
+function splitInlineImages(text: string) {
+  const parts: Array<{ text: string } | { alt: string; src: string }> = []
+  const imageSyntax = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g
+  let cursor = 0
+  for (const match of text.matchAll(imageSyntax)) {
+    const index = match.index ?? 0
+    if (index > cursor) parts.push({ text: text.slice(cursor, index) })
+    parts.push({ alt: match[1], src: match[2] })
+    cursor = index + match[0].length
+  }
+  if (cursor < text.length || parts.length === 0) parts.push({ text: text.slice(cursor) })
+  return parts
+}
+
+export function PlainTextPreview({ content, compact = false, renderImage }: { content: string; compact?: boolean; renderImage?: (src: string, alt: string) => ReactNode }) {
   const segments = parsePlainText(content)
   return <div className={compact ? 'note-card-preview plain' : 'note-plain-preview'}>{segments.map((segment, index) => segment.kind === 'text'
-    ? <div className="plain-text-run" key={`text-${index}`}>{segment.value}</div>
+    ? <div className="plain-text-run" key={`text-${index}`}>{renderImage ? splitInlineImages(segment.value).map((part, partIndex) => 'src' in part ? <span className="plain-inline-image" key={`image-${partIndex}`}>{renderImage(part.src, part.alt)}</span> : <span key={`text-${partIndex}`}>{part.text}</span>) : segment.value}</div>
     : <ReactMarkdown key={`code-${index}`} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: compact ? CompactMarkdownCodeBlock : MarkdownCodeBlock }} skipHtml>{asSafeMarkdownFence(segment.language, segment.value)}</ReactMarkdown>)}</div>
 }

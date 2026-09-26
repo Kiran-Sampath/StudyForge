@@ -138,6 +138,47 @@ test('note image upload resets the form after the async request', async ({ page 
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
+test('pasting a screenshot uploads it and inserts an inline image in either editor mode', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await showNotes(page)
+  await page.getByRole('radio', { name: 'Plain text' }).check()
+  const editor = page.getByRole('textbox', { name: 'Note content' })
+  await editor.fill('Before after')
+  await editor.evaluate((field: HTMLTextAreaElement) => field.setSelectionRange(7, 7))
+  await editor.evaluate((field: HTMLTextAreaElement) => {
+    const clipboard = new DataTransfer()
+    clipboard.items.add(new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'diagram.png', { type: 'image/png' }))
+    field.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: clipboard }))
+  })
+  await expect(editor).toHaveValue(/Before\s+!\[diagram\.png\]\(https:\/\/studyforge\.supabase\.co\/storage\/v1\/object\/sign[\s\S]*after/)
+  await expect(page.getByRole('region', { name: 'Plain text preview' }).getByRole('button', { name: 'View image: diagram.png' })).toBeVisible()
+  await page.getByRole('tab', { name: /Resources/ }).click()
+  await expect(page.getByRole('button', { name: /Images 1/ })).toBeVisible()
+  await page.getByRole('tab', { name: 'All' }).click()
+  await expect(page.locator('.note-all-content img')).toHaveAttribute('src', /token=fresh/)
+  await expect(page.getByText('Saved automatically', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.locator('.note-all-content img')).toHaveAttribute('src', /token=fresh/)
+})
+
+test('pasted screenshots render inline in Markdown mode and can be enlarged', async ({ page }) => {
+  await page.goto('/paths/5/topics/501')
+  await page.getByRole('button', { name: 'New note' }).click()
+  await showNotes(page)
+  const editor = page.getByRole('textbox', { name: 'Note content' })
+  await editor.evaluate((field: HTMLTextAreaElement) => {
+    const clipboard = new DataTransfer()
+    clipboard.items.add(new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'diagram.png', { type: 'image/png' }))
+    field.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: clipboard }))
+  })
+  const preview = page.getByRole('region', { name: 'Markdown preview' })
+  const pastedImage = preview.getByRole('button', { name: 'View image: diagram.png' })
+  await expect(pastedImage).toBeVisible()
+  await pastedImage.click()
+  await expect(page.getByRole('dialog', { name: 'diagram.png' })).toBeVisible()
+})
+
 test('content tabs preserve drafts and Add Content reuses resource flows', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/paths/5/topics/501')

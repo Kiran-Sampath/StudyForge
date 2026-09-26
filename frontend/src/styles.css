@@ -390,6 +390,10 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-image-list .note-image-thumb { width: 54px; height: 54px; flex: none; }
 .note-inline-image { display: inline-flex; max-width: 100%; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: zoom-in; }
 .note-inline-image img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.plain-inline-image { display: inline-block; max-width: 100%; margin: 7px 0; vertical-align: middle; }
+.note-inline-upload-status { margin: 0; padding: 9px 15px; border-bottom: 1px solid #edf0ea; background: #f8faf7; color: #66806c; font-size: 12px; }
+.note-paste-hint { margin-right: auto; align-self: center; color: #8a988e; font-size: 11px; }
+.note-write textarea[readonly] { cursor: progress; }
 .image-viewer-backdrop { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; overflow: auto; padding: 24px; background: #17251dc7; }
 .image-viewer { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: min(100%,1050px); max-height: min(92dvh,1000px); padding: 18px; border: 1px solid #e4e9e2; border-radius: 18px; background: #fff; box-shadow: 0 24px 80px #07140c55; }
 .image-viewer header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 2px 2px 15px; }
