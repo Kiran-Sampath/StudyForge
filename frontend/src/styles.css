@@ -349,6 +349,10 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-all-content { max-width: 850px; margin: 0 auto; padding: 8px 0 18px; }
 .note-all-content:empty { display: none; }
 .note-all-empty,.note-resource-empty { margin: 28px 0; color: #87958b; text-align: center; font-size: 14px; }
+.note-all-images { display: grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 12px; margin: 22px 0; }
+.note-all-images figure { min-width: 0; margin: 0; padding: 8px; border: 1px solid #e8ece6; border-radius: 12px; background: #fbfcfa; }
+.note-all-images img { display: block; width: 100%; height: 125px; object-fit: cover; border-radius: 8px; background: #f0f3ee; }
+.note-all-images figcaption { margin: 7px 2px 0; overflow: hidden; color: #66766b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .note-all-links { display: grid; grid-template-columns: repeat(auto-fill,minmax(245px,1fr)); gap: 10px; margin: 20px 0 0; }
 .note-resource-card { display: flex; align-items: center; min-width: 0; gap: 11px; padding: 13px; border: 1px solid #e8ece6; border-radius: 12px; background: #fff; color: inherit; text-decoration: none; transition: border-color .16s ease,transform .16s ease; }
 .note-resource-card:hover { transform: translateY(-1px); border-color: #b8cbb8; }
@@ -376,6 +380,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-image-thumb { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; border-radius: 8px; background: #f0f3ee; cursor: zoom-in; }
 .note-image-thumb:focus-visible,.note-inline-image:focus-visible { outline: 3px solid #86a98b; outline-offset: 3px; }
 .note-image-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.note-all-images .note-image-thumb { height: 125px; }
 .note-image-list .note-image-thumb { width: 54px; height: 54px; flex: none; }
 .note-inline-image { display: inline-flex; max-width: 100%; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: zoom-in; }
 .note-inline-image img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
