@@ -127,6 +127,12 @@ describe('learning workspace', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'System Design' })).toBeInTheDocument()
   })
 
+  it('returns a signed-in OAuth callback to the dashboard', async () => {
+    await setup('/auth/callback')
+    expect(screen.getByRole('heading', { name: 'A little more understanding.' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'This page wandered off.' })).not.toBeInTheDocument()
+  })
+
   it('adds, edits, completes, and deletes a topic with progress updates', async () => {
     const user = await setup()
     await user.click(screen.getByRole('link', { name: /Python & FastAPI Open learning path/ }))
