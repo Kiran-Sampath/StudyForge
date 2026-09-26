@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Bold, BookOpen, ChevronDown, Code2, Columns2, ExternalLink, Eye, FileText, Heading2, ImagePlus, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bold, BookOpen, ChevronDown, Code2, Columns2, Download, ExternalLink, Eye, FileText, Heading2, ImagePlus, Italic, Link2, List, PanelLeft, PanelRight, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
 import { Link, useBlocker, useParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -15,6 +15,7 @@ type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 type NoteTab = 'all' | 'notes' | 'resources'
 type ResourceFilter = 'all' | 'images' | 'links'
 type ContentAction = 'image' | 'link' | null
+type ImageViewerItem = { url: string; filename: string; altText: string }
 const codeLanguages = ['plaintext', 'bash', 'c', 'cpp', 'csharp', 'css', 'go', 'html', 'java', 'javascript', 'json', 'markdown', 'python', 'rust', 'sql', 'typescript', 'xml', 'yaml']
 
 function sameInput(left: NoteInput, right: NoteInput) {
@@ -70,6 +71,7 @@ export function NoteEditor() {
   const [contentAction, setContentAction] = useState<ContentAction>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [pendingFocus, setPendingFocus] = useState<'editor' | 'image' | 'link' | null>(null)
+  const [viewingImage, setViewingImage] = useState<ImageViewerItem | null>(null)
   const [learningCheckOpen, setLearningCheckOpen] = useState(false)
   const [saved, setSaved] = useState<NoteInput>({ title: '', content: '', format: 'markdown', links: [], key_takeaway: null, revisit_question: null, confidence: null })
   const [loading, setLoading] = useState(true)
@@ -83,6 +85,8 @@ export function NoteEditor() {
   const imageInput = useRef<HTMLInputElement>(null)
   const linkLabelInput = useRef<HTMLInputElement>(null)
   const contentMenu = useRef<HTMLDivElement>(null)
+  const viewerTrigger = useRef<HTMLElement | null>(null)
+  const viewerCloseButton = useRef<HTMLButtonElement>(null)
   const draft: NoteInput = { title, content, format, links, key_takeaway: keyTakeaway || null, revisit_question: revisitQuestion || null, confidence }
   const latestDraft = useRef(draft)
   const savedDraft = useRef(saved)
@@ -118,6 +122,18 @@ export function NoteEditor() {
       document.removeEventListener('keydown', closeEscape)
     }
   }, [addMenuOpen])
+
+  useEffect(() => {
+    if (!viewingImage) return
+    const trigger = viewerTrigger.current
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setViewingImage(null) }
+    document.addEventListener('keydown', closeOnEscape)
+    viewerCloseButton.current?.focus()
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape)
+      trigger?.focus()
+    }
+  }, [viewingImage])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -314,6 +330,25 @@ export function NoteEditor() {
     setPendingFocus(action)
   }
 
+  function openImageViewer(image: ImageViewerItem, trigger: HTMLElement) {
+    viewerTrigger.current = trigger
+    setViewingImage(image)
+  }
+
+  function imageDownloadUrl(image: ImageViewerItem) {
+    const url = new URL(image.url)
+    url.searchParams.set('download', image.filename)
+    return url.toString()
+  }
+
+  function renderMarkdownImage(src: string | undefined, alt: string | undefined) {
+    const uploaded = matchingUploadedImage(src, images)
+    const url = uploaded?.url ?? src
+    if (!url) return null
+    const item = { url, filename: uploaded?.filename ?? alt ?? 'note-image', altText: alt || uploaded?.alt_text || '' }
+    return <button className="note-inline-image" type="button" aria-label={`View image: ${item.altText || item.filename}`} onClick={event => openImageViewer(item, event.currentTarget)}><img src={url} alt={item.altText || item.filename} /></button>
+  }
+
   const back = `/paths/${pathId}/topics/${topicId}`
   if (loading) return <div className="page note-page" role="status">Loading note…</div>
   if (!note) return <div className="page empty-state"><h1>Note not found</h1><p role="alert">{error}</p><Link className="button secondary" to={back}>Back to topic</Link></div>
@@ -327,8 +362,8 @@ export function NoteEditor() {
     </div>
     <section id="note-panel-all" className="note-tab-panel note-all-panel" role="tabpanel" aria-labelledby="note-tab-all" hidden={activeTab !== 'all'}>
       <div className="note-all-toolbar"><span><BookOpen size={16} /> Note overview</span><button className="button secondary" type="button" onClick={() => { setActiveTab('notes'); setPendingFocus('editor') }}>Edit Note</button></div>
-      {content.trim() ? <div className="markdown-body note-all-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => { const image = matchingUploadedImage(src, images); return <img src={image?.url ?? src} alt={alt || image?.alt_text || ''} /> } }} skipHtml>{content}</ReactMarkdown></div> : <p className="note-all-empty">No note text yet. Choose <strong>Write Text</strong> to start.</p>}
-      {galleryImages.length > 0 && <div className="note-all-images" aria-label="Uploaded image gallery">{galleryImages.map(image => <figure key={image.id}><img src={image.url} alt={image.alt_text || image.filename} /><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
+      {content.trim() ? <div className="markdown-body note-all-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{content}</ReactMarkdown></div> : <p className="note-all-empty">No note text yet. Choose <strong>Write Text</strong> to start.</p>}
+      {galleryImages.length > 0 && <div className="note-all-images" aria-label="Uploaded image gallery">{galleryImages.map(image => <figure key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.alt_text || image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
       {links.length > 0 && <div className="note-all-links" aria-label="Learning links">{links.map((link, index) => <a key={`${link.url}-${index}`} className="note-resource-card" href={link.url} target="_blank" rel="noopener noreferrer"><span className="note-link-icon"><ExternalLink size={17} /></span><span><strong>{link.label || new URL(link.url).hostname}</strong><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></span><ExternalLink className="note-card-open" size={15} /></a>)}</div>}
     </section>
     <section id="note-panel-notes" className="note-tab-panel" role="tabpanel" aria-labelledby="note-tab-notes" hidden={activeTab !== 'notes'}>
@@ -343,8 +378,8 @@ export function NoteEditor() {
         </section>
         <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>
           <div className="note-pane-title"><Eye size={15} /> PREVIEW</div>
-          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => { const image = matchingUploadedImage(src, images); return <img src={image?.url ?? src} alt={alt || image?.alt_text || ''} /> } }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
-            {galleryImages.length > 0 && <div className="note-image-preview" aria-label="Attached note images">{galleryImages.map(image => <figure key={image.id}><img src={image.url} alt={image.alt_text || image.filename} /><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
+          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{content}</ReactMarkdown> : <PlainTextPreview content={content} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
+            {galleryImages.length > 0 && <div className="note-image-preview" aria-label="Attached note images">{galleryImages.map(image => <figure key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.alt_text || image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
           </div>
         </section>
       </div>
@@ -360,10 +395,11 @@ export function NoteEditor() {
       {contentAction === 'link' && <form className="note-link-form note-resource-form" onSubmit={addLink}><label>Link title <span>optional</span><input ref={linkLabelInput} value={linkLabel} maxLength={120} onChange={event => setLinkLabel(event.target.value)} placeholder="e.g. Official documentation" /></label><label>URL<input type="url" required value={linkUrl} onChange={event => { setLinkUrl(event.target.value); setLinkError('') }} placeholder="https://…" /></label><button className="button primary" type="submit"><Plus size={16} /> Add link</button></form>}
       {(imageError || linkError) && <p className="request-error" role="alert">{imageError || linkError}</p>}
       {contentAction === 'image' && <p className="note-image-help">JPEG, PNG, or WebP · up to 8 MB each · private to your account</p>}
-      {(resourceFilter === 'all' || resourceFilter === 'images') && images.length > 0 && <><h2 className="note-resource-section-title">Images <span>{images.length} / 10</span></h2><ul className="note-image-list">{images.map(image => <li key={image.id}><img src={image.url} alt={image.alt_text || image.filename} /><div><strong>{image.filename}</strong><small>{image.alt_text || `${(image.size_bytes / 1024 / 1024).toFixed(2)} MB`}</small></div><button className="icon-button" type="button" aria-label={`Remove ${image.filename}`} disabled={imageBusy} onClick={() => void removeImage(image)}><Trash2 size={16} /></button></li>)}</ul></>}
+      {(resourceFilter === 'all' || resourceFilter === 'images') && images.length > 0 && <><h2 className="note-resource-section-title">Images <span>{images.length} / 10</span></h2><ul className="note-image-list">{images.map(image => <li key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><div><strong>{image.filename}</strong><small>{image.alt_text || `${(image.size_bytes / 1024 / 1024).toFixed(2)} MB`}</small></div><button className="icon-button" type="button" aria-label={`Remove ${image.filename}`} disabled={imageBusy} onClick={() => void removeImage(image)}><Trash2 size={16} /></button></li>)}</ul></>}
       {(resourceFilter === 'all' || resourceFilter === 'links') && links.length > 0 && <><h2 className="note-resource-section-title">Links <span>{links.length} / 30</span></h2><ul className="note-link-list">{links.map((link, index) => <li key={`${link.url}-${index}`}><span className="note-link-icon"><ExternalLink size={18} /></span><div><a href={link.url} target="_blank" rel="noopener noreferrer">{link.label || new URL(link.url).hostname} <ExternalLink size={13} /></a><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></div><button className="icon-button" aria-label={`Remove ${link.label || link.url}`} onClick={() => setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={16} /></button></li>)}</ul></>}
       {((resourceFilter === 'all' && images.length + links.length === 0) || (resourceFilter === 'images' && images.length === 0) || (resourceFilter === 'links' && links.length === 0)) && <p className="note-resource-empty">{resourceFilter === 'images' ? 'No images attached yet.' : resourceFilter === 'links' ? 'No learning links saved yet.' : 'Your resources will appear here as you add them.'}</p>}
     </section>
+    {viewingImage && <div className="image-viewer-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setViewingImage(null) }}><section className="image-viewer" role="dialog" aria-modal="true" aria-labelledby="image-viewer-title"><header><div><h2 id="image-viewer-title">{viewingImage.filename}</h2>{viewingImage.altText && <p>{viewingImage.altText}</p>}</div><button ref={viewerCloseButton} className="icon-button" type="button" aria-label="Close image viewer" onClick={() => setViewingImage(null)}><X size={19} /></button></header><img className="image-viewer-image" src={viewingImage.url} alt={viewingImage.altText || viewingImage.filename} /><footer><a className="button primary" href={imageDownloadUrl(viewingImage)} download={viewingImage.filename}><Download size={16} /> Download image</a></footer></section></div>}
     {blocker.state === 'blocked' && <div className="note-leave-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-title"><div className="note-leave-dialog"><h2 id="leave-title">Leave without saving?</h2><p>Your latest changes will be lost.</p><div><button className="button secondary" onClick={() => blocker.reset()}>Keep editing</button><button className="button primary" onClick={() => blocker.proceed()}>Discard changes</button></div></div></div>}
   </div>
 }
