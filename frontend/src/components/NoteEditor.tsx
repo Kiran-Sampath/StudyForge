@@ -91,7 +91,6 @@ export function NoteEditor() {
   const dirty = Boolean(note) && !sameInput(draft, saved)
   const blocker = useBlocker(dirty || inlineImageUploading)
   const resourceImages = images.filter(image => !markdownReferencesImage(content, image.url))
-  const galleryImages = resourceImages
   const hasInlineImages = findInlineMarkdownImages(content).length > 0
 
   useEffect(() => {
@@ -442,7 +441,6 @@ export function NoteEditor() {
     <section id="note-panel-all" className="note-tab-panel note-all-panel" role="tabpanel" aria-labelledby="note-tab-all" hidden={activeTab !== 'all'}>
       <div className="note-all-toolbar"><span><BookOpen size={16} /> Note overview</span><button className="button secondary" type="button" onClick={() => { setActiveTab('notes'); setPendingFocus('editor') }}>Edit Note</button></div>
       {content.trim() ? <div className="markdown-body note-all-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{normalizeInlineMarkdownImages(content)}</ReactMarkdown></div> : <p className="note-all-empty">No note text yet. Choose <strong>Write Text</strong> to start.</p>}
-      {galleryImages.length > 0 && <div className="note-all-images" aria-label="Uploaded image gallery">{galleryImages.map(image => <figure key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.alt_text || image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
       {links.length > 0 && <div className="note-all-links" aria-label="Learning links">{links.map((link, index) => <a key={`${link.url}-${index}`} className="note-resource-card" href={link.url} target="_blank" rel="noopener noreferrer"><span className="note-link-icon"><ExternalLink size={17} /></span><span><strong>{link.label || new URL(link.url).hostname}</strong><small>{linkKind(link.url)} · {new URL(link.url).hostname}</small></span><ExternalLink className="note-card-open" size={15} /></a>)}</div>}
     </section>
     <section id="note-panel-notes" className="note-tab-panel" role="tabpanel" aria-labelledby="note-tab-notes" hidden={activeTab !== 'notes'}>
@@ -462,9 +460,7 @@ export function NoteEditor() {
         </section>
         <section className={`note-preview ${layout === 'write' ? 'layout-hidden' : ''}`} aria-label={format === 'markdown' ? 'Markdown preview' : 'Plain text preview'}>
           <div className="note-pane-title"><Eye size={15} /> PREVIEW</div>
-          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{normalizeInlineMarkdownImages(content)}</ReactMarkdown> : <PlainTextPreview content={content} renderImage={renderMarkdownImage} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}
-            {galleryImages.length > 0 && <div className="note-image-preview" aria-label="Attached note images">{galleryImages.map(image => <figure key={image.id}><button className="note-image-thumb" type="button" aria-label={`View image: ${image.alt_text || image.filename}`} onClick={event => openImageViewer({ url: image.url, filename: image.filename, altText: image.alt_text || '' }, event.currentTarget)}><img src={image.url} alt="" /></button><figcaption>{image.alt_text || image.filename}</figcaption></figure>)}</div>}
-          </div>
+          <div className="markdown-body">{content.trim() ? format === 'markdown' ? <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ pre: MarkdownCodeBlock, img: ({ src, alt }) => renderMarkdownImage(src, alt) }} skipHtml>{normalizeInlineMarkdownImages(content)}</ReactMarkdown> : <PlainTextPreview content={content} renderImage={renderMarkdownImage} /> : <p className="preview-empty">Your preview will appear here as you write.</p>}</div>
         </section>
       </div>
       <section className={`learning-check ${learningCheckOpen ? 'open' : ''}`} aria-labelledby="learning-check-heading">

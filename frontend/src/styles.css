@@ -299,10 +299,6 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-image-list strong,.note-image-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-image-list strong { color: #405449; font-size: 12px; }
 .note-image-list small { margin-top: 4px; color: #849188; font-size: 11px; }
-.note-image-preview { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; margin-top: 20px; }
-.note-image-preview figure { margin: 0; min-width: 0; }
-.note-image-preview img { display: block; width: 100%; max-height: 440px; object-fit: contain; border: 1px solid #e5e9e3; border-radius: 12px; background: #f7f8f5; }
-.note-image-preview figcaption { margin-top: 6px; color: #7c897f; font-size: 12px; overflow-wrap: anywhere; }
 .note-image-form { display: grid; grid-template-columns: minmax(180px,1fr) minmax(180px,1fr) auto; align-items: end; gap: 12px; margin-top: 23px; }
 .note-image-form label { display: grid; gap: 7px; color: #52665a; font-size: 13px; font-weight: 700; }
 .note-image-form label span { color: #99a79b; font-weight: 400; }
@@ -317,10 +313,6 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-image-list strong,.note-image-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-image-list strong { color: #405449; font-size: 12px; }
 .note-image-list small { margin-top: 4px; color: #849188; font-size: 11px; }
-.note-image-preview { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; margin-top: 20px; }
-.note-image-preview figure { margin: 0; min-width: 0; }
-.note-image-preview img { display: block; width: 100%; max-height: 440px; object-fit: contain; border: 1px solid #e5e9e3; border-radius: 12px; background: #f7f8f5; }
-.note-image-preview figcaption { margin-top: 6px; color: #7c897f; font-size: 12px; overflow-wrap: anywhere; }
 .learning-check { margin-top: 24px; overflow: hidden; border: 1px solid #e1e7df; border-radius: 16px; background: #fff; }
 .learning-check-toggle { display: flex; align-items: center; gap: 13px; width: 100%; padding: 20px 24px; border: 0; background: transparent; color: #2c4033; text-align: left; cursor: pointer; }
 .learning-check-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 11px; background: #edf4ed; color: #4f7759; }
@@ -357,10 +349,6 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-all-content { max-width: 850px; margin: 0 auto; padding: 8px 0 18px; }
 .note-all-content:empty { display: none; }
 .note-all-empty,.note-resource-empty { margin: 28px 0; color: #87958b; text-align: center; font-size: 14px; }
-.note-all-images { display: grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 12px; margin: 22px 0; }
-.note-all-images figure { min-width: 0; margin: 0; padding: 8px; border: 1px solid #e8ece6; border-radius: 12px; background: #fbfcfa; }
-.note-all-images img { display: block; width: 100%; height: 125px; object-fit: cover; border-radius: 8px; background: #f0f3ee; }
-.note-all-images figcaption { margin: 7px 2px 0; overflow: hidden; color: #66766b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .note-all-links { display: grid; grid-template-columns: repeat(auto-fill,minmax(245px,1fr)); gap: 10px; margin: 20px 0 0; }
 .note-resource-card { display: flex; align-items: center; min-width: 0; gap: 11px; padding: 13px; border: 1px solid #e8ece6; border-radius: 12px; background: #fff; color: inherit; text-decoration: none; transition: border-color .16s ease,transform .16s ease; }
 .note-resource-card:hover { transform: translateY(-1px); border-color: #b8cbb8; }
@@ -388,9 +376,6 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .note-image-thumb { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; border-radius: 8px; background: #f0f3ee; cursor: zoom-in; }
 .note-image-thumb:focus-visible,.note-inline-image:focus-visible { outline: 3px solid #86a98b; outline-offset: 3px; }
 .note-image-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.note-all-images .note-image-thumb { height: 125px; }
-.note-image-preview .note-image-thumb { max-height: 440px; }
-.note-image-preview .note-image-thumb img { max-height: 440px; object-fit: contain; }
 .note-image-list .note-image-thumb { width: 54px; height: 54px; flex: none; }
 .note-inline-image { display: inline-flex; max-width: 100%; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: zoom-in; }
 .note-inline-image img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
@@ -407,7 +392,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: clamp(25px, 2.3vw, 34px); fo
 .image-viewer footer { display: flex; justify-content: flex-end; padding-top: 15px; }
 @media(max-width:700px) { .note-link-form { grid-template-columns: 1fr; }.note-link-form .button { justify-self: start; }.note-resources { padding: 22px; }.note-format-picker>span { width: 100%; margin: 0 0 0 4px; } }
 @media(max-width:700px) { .note-image-form { grid-template-columns: 1fr; }.note-image-form .button { justify-self: start; } }
-@media(max-width:700px) { .note-header { flex-wrap: wrap; }.note-header-actions { width: 100%; justify-content: space-between; }.note-header-actions>.button,.note-header-actions .add-content-menu>.button { min-height: 42px; }.note-primary-tabs { position: sticky; top: 0; z-index: 3; margin: 0 -20px 16px; padding: 0 14px; background: #f6f8f5; }.note-primary-tabs [role=tab] { flex: 1; justify-content: center; padding: 0 10px; }.note-all-panel { min-height: 0; padding: 19px; }.note-all-toolbar { margin-bottom: 14px; }.note-all-images { grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap: 8px; }.note-all-images img { height: 105px; }.note-all-links { grid-template-columns: 1fr; }.note-resource-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }.note-resource-filters button { justify-content: center; gap: 5px; padding: 0 5px; font-size: 11px; }.note-resource-form { padding: 13px; }.note-resource-actions { margin: 12px 0; } }
+@media(max-width:700px) { .note-header { flex-wrap: wrap; }.note-header-actions { width: 100%; justify-content: space-between; }.note-header-actions>.button,.note-header-actions .add-content-menu>.button { min-height: 42px; }.note-primary-tabs { position: sticky; top: 0; z-index: 3; margin: 0 -20px 16px; padding: 0 14px; background: #f6f8f5; }.note-primary-tabs [role=tab] { flex: 1; justify-content: center; padding: 0 10px; }.note-all-panel { min-height: 0; padding: 19px; }.note-all-toolbar { margin-bottom: 14px; }.note-all-links { grid-template-columns: 1fr; }.note-resource-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; }.note-resource-filters button { justify-content: center; gap: 5px; padding: 0 5px; font-size: 11px; }.note-resource-form { padding: 13px; }.note-resource-actions { margin: 12px 0; } }
 @media(max-width:700px) { .image-viewer-backdrop { align-items: center; padding: 12px; }.image-viewer { width: 100%; max-height: 94dvh; padding: 12px; border-radius: 14px; }.image-viewer-image { max-height: calc(94dvh - 145px); }.image-viewer footer .button { min-height: 44px; } }
 @media(max-width:700px) { .note-image-form { grid-template-columns: 1fr; }.note-image-form .button { justify-self: start; } }
 @media(max-width:700px) { .learning-check-fields { grid-template-columns: 1fr; padding: 20px; }.learning-check-fields fieldset { grid-column: auto; }.learning-check-toggle { padding: 18px 20px; }.optional-label { display: none; }.confidence-options { align-items: stretch; flex-direction: column; }.confidence-options label { width: 100%; box-sizing: border-box; }.note-code-options { flex-wrap: wrap; }.note-code-options label { flex-basis: 100%; } }
